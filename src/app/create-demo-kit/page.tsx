@@ -3,6 +3,8 @@
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { useRouter } from "next/navigation";
+
 
 // Placeholder SVG
 const PLACEHOLDER_SVG =
@@ -27,6 +29,7 @@ export default function CreateDemoKitPage() {
     copilot: [] as string[],
     fiveG: [] as string[],
   });
+  const router = useRouter();
 
   // Fetch products
   useEffect(() => {
@@ -146,6 +149,7 @@ export default function CreateDemoKitPage() {
                     alt={product.product_name || product.name}
                     fill
                     className="object-cover"
+                    onClick={() => router.push(`/product/${product.id}`)}
                   />
                 </div>
                 <div className="p-4 flex-1 flex flex-col justify-between">
