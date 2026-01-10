@@ -80,7 +80,7 @@ export default function Navbar() {
             <Link href="/how-it-works" className="hover:opacity-70">How it Works</Link>
           </li>
           <li>
-            <Link href="/demo-kit" className="hover:opacity-70">Create Demo Kit</Link>
+            <Link href="/create-demo-kit" className="hover:opacity-70">Create Demo Kit</Link>
           </li>
 
           {user && (
