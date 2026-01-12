@@ -5,7 +5,6 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 
-
 // Placeholder SVG
 const PLACEHOLDER_SVG =
   "data:image/svg+xml;utf8," +
@@ -29,6 +28,7 @@ export default function CreateDemoKitPage() {
     copilot: [] as string[],
     fiveG: [] as string[],
   });
+
   const router = useRouter();
 
   // Fetch products
@@ -38,6 +38,7 @@ export default function CreateDemoKitPage() {
         .from("products")
         .select("*")
         .order("id", { ascending: true });
+
       if (error) console.error("Error fetching products:", error);
       else setProducts(data || []);
     };
@@ -49,20 +50,57 @@ export default function CreateDemoKitPage() {
       const list = prev[category as keyof typeof prev];
       return {
         ...prev,
-        [category]: list.includes(value) ? list.filter((v) => v !== value) : [...list, value],
+        [category]: list.includes(value)
+          ? list.filter((v) => v !== value)
+          : [...list, value],
       };
     });
   };
 
   // Apply filters
   const filteredProducts = products.filter((product) => {
-    if (selectedFilters.formFactor.length && !selectedFilters.formFactor.includes(product.form_factor)) return false;
-    if (selectedFilters.processor.length && !selectedFilters.processor.includes(product.processor)) return false;
-    if (selectedFilters.screenSize.length && !selectedFilters.screenSize.includes(product.screen_size)) return false;
-    if (selectedFilters.memory.length && !selectedFilters.memory.includes(product.memory)) return false;
-    if (selectedFilters.storage.length && !selectedFilters.storage.includes(product.storage)) return false;
-    if (selectedFilters.copilot.length && (product.copilot ? "Yes" : "No") !== selectedFilters.copilot[0]) return false;
-    if (selectedFilters.fiveG.length && (product.five_g ? "Yes" : "No") !== selectedFilters.fiveG[0]) return false;
+    if (
+      selectedFilters.formFactor.length &&
+      !selectedFilters.formFactor.includes(product.form_factor)
+    )
+      return false;
+
+    if (
+      selectedFilters.processor.length &&
+      !selectedFilters.processor.includes(product.processor)
+    )
+      return false;
+
+    if (
+      selectedFilters.screenSize.length &&
+      !selectedFilters.screenSize.includes(product.screen_size)
+    )
+      return false;
+
+    if (
+      selectedFilters.memory.length &&
+      !selectedFilters.memory.includes(product.memory)
+    )
+      return false;
+
+    if (
+      selectedFilters.storage.length &&
+      !selectedFilters.storage.includes(product.storage)
+    )
+      return false;
+
+    if (
+      selectedFilters.copilot.length &&
+      (product.copilot ? "Yes" : "No") !== selectedFilters.copilot[0]
+    )
+      return false;
+
+    if (
+      selectedFilters.fiveG.length &&
+      (product.five_g ? "Yes" : "No") !== selectedFilters.fiveG[0]
+    )
+      return false;
+
     return true;
   });
 
@@ -83,7 +121,6 @@ export default function CreateDemoKitPage() {
       <div className="max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
         {/* Filters */}
         <aside className="bg-white rounded-2xl shadow p-5 space-y-4">
-
           <FilterGroup
             title="Form Factor"
             options={["2 in 1's", "Accessories", "Notebooks"]}
@@ -93,14 +130,19 @@ export default function CreateDemoKitPage() {
           />
           <FilterGroup
             title="Processor"
-            options={["Intel® Core™ Ultra 5", "Intel® Core™ Ultra 7", "Snapdragon X Elite", "Snapdragon X Plus"]}
+            options={[
+              "Intel® Core™ Ultra 5",
+              "Intel® Core™ Ultra 7",
+              "Snapdragon X Elite",
+              "Snapdragon X Plus",
+            ]}
             category="processor"
             selectedFilters={selectedFilters}
             onChange={handleFilterChange}
           />
           <FilterGroup
             title="Screen Size"
-            options={["12\"", "13\"", "13.8\"", "15\""]}
+            options={['12"', '13"', '13.8"', '15"']}
             category="screenSize"
             selectedFilters={selectedFilters}
             onChange={handleFilterChange}
@@ -141,22 +183,39 @@ export default function CreateDemoKitPage() {
             {filteredProducts.map((product) => (
               <div
                 key={product.id}
-                className="bg-white rounded-2xl shadow hover:shadow-lg transition flex flex-col"
+                className="bg-white rounded-2xl shadow hover:shadow-lg transition flex flex-col group"
               >
                 <div className="w-full h-[240px] relative rounded-t-2xl overflow-hidden">
+                  {/* 5G Badge Image */}
+                  {product.five_g && (
+                    <Image
+                      src="/5g-logo.png"
+                      alt="5G Badge"
+                      width={40}
+                      height={40}
+                      className="absolute top-2 right-2 z-10"
+                    />
+                  )}
+
+                  {/* Product Image */}
                   <Image
                     src={product.image_url || PLACEHOLDER_SVG}
-                    alt={product.product_name || product.name}
+                    alt={product.product_name}
                     fill
-                    className="object-cover"
-                    onClick={() => router.push(`/product/${product.id}`)}
+                    className="object-cover cursor-pointer transition-transform duration-300 group-hover:scale-105"
+                    onClick={() => {
+                      if (!product.slug) return;
+                      router.push(`/product/${product.slug}`);
+                    }}
                   />
                 </div>
+
                 <div className="p-4 flex-1 flex flex-col justify-between">
                   <div>
-                    <h3 className="font-medium text-sm">{product.product_name || product.name}</h3>
+                    <h3 className="font-medium text-sm">{product.product_name}</h3>
                     <p className="text-xs text-gray-500">SKU: {product.sku}</p>
                   </div>
+
                   <button className="mt-3 w-full bg-yellow-400 text-black py-2 rounded hover:bg-yellow-500 transition text-sm">
                     Add to Cart
                   </button>
@@ -170,7 +229,7 @@ export default function CreateDemoKitPage() {
   );
 }
 
-// Modern Filter Group with single-line arrow SVG
+// Filter Group
 function FilterGroup({
   title,
   options,
@@ -191,16 +250,21 @@ function FilterGroup({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between text-sm font-semibold hover:text-gray-900 transition"
+        className="flex w-full items-center justify-between text-sm font-semibold"
       >
         <span>{title}</span>
-        <span
-          className={`transform transition-transform duration-300 ${open ? "rotate-180" : "rotate-0"}`}
-        >
-          {/* Single line arrow SVG like the nounproject icon */}
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-               strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="6 9 12 15 18 9"></polyline>
+        <span className={`transform transition-transform ${open ? "rotate-180" : ""}`}>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points="6 9 12 15 18 9" />
           </svg>
         </span>
       </button>
@@ -212,15 +276,17 @@ function FilterGroup({
             return (
               <label
                 key={opt}
-                className={`flex items-center gap-2 text-sm px-2 py-1 rounded cursor-pointer transition ${
-                  isSelected ? "bg-yellow-400 text-black font-semibold" : "text-gray-700 hover:bg-gray-100"
+                className={`flex items-center gap-2 text-sm px-2 py-1 rounded cursor-pointer ${
+                  isSelected
+                    ? "bg-yellow-400 text-black font-semibold"
+                    : "text-gray-700 hover:bg-gray-100"
                 }`}
               >
                 <input
                   type="checkbox"
                   checked={isSelected}
                   onChange={() => onChange(category, opt)}
-                  className="rounded accent-yellow-400 cursor-pointer"
+                  className="rounded accent-yellow-400"
                 />
                 {opt}
               </label>
