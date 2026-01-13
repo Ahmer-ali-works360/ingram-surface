@@ -44,12 +44,21 @@ export default function LoginPage() {
       }
 
       if (data.user) {
-        // Check if user status is "approved"
-        const { data: profileData } = await supabase
+        // ✅ Fetch status AND role from profiles
+        const { data: profileData, error: profileError } = await supabase
           .from("profiles")
-          .select("status")
+          .select("status, role") // role fetch added
           .eq("id", data.user.id)
           .single();
+
+        if (profileError) {
+          console.error("Error fetching profile:", profileError.message);
+          toast.error("Unable to fetch user role.");
+          return;
+        }
+
+        // Console check: role fetch hua ya nahi
+        console.log("Fetched user role:", profileData?.role);
 
         if (profileData?.status !== "approved") {
           toast.error("Your account is not approved yet.");
@@ -59,7 +68,6 @@ export default function LoginPage() {
 
         // Handle "Keep me signed in"
         if (!keepSignedIn) {
-          // Move current session to sessionStorage so it expires on tab close
           const { data: sessionData } = await supabase.auth.getSession();
           if (sessionData?.session) {
             sessionStorage.setItem("sb-session", JSON.stringify(sessionData.session));

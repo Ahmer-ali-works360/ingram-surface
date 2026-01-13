@@ -1,3 +1,5 @@
+//src/app/layout.tsx
+
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
@@ -9,6 +11,9 @@ import FontAwesomeClient from "./components/FontAwesomeClient";
 /* 👉 Cart imports */
 import { CartProvider } from "../context/CartContext";
 import CartDrawer from "./components/cart/CartDrawer";
+
+/* ✅ AuthContext import */
+import { AuthProvider } from "./context/AuthContext";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -32,19 +37,22 @@ export default function RootLayout({
       <body className="min-h-screen flex flex-col antialiased">
         {/* ✅ Cart Provider wraps the whole app */}
         <CartProvider>
-          <FontAwesomeClient />
+          {/* ✅ AuthProvider wraps all components that need auth */}
+          <AuthProvider>
+            <FontAwesomeClient />
 
-          {/* Header */}
-          <Navbar />
+            {/* Header */}
+            <Navbar />
 
-          {/* ✅ Global Cart Drawer */}
-          <CartDrawer />
+            {/* ✅ Global Cart Drawer */}
+            <CartDrawer />
 
-          {/* Main content */}
-          <main className="flex-grow">{children}</main>
+            {/* Main content */}
+            <main className="flex-grow">{children}</main>
 
-          {/* Footer */}
-          <Footer />
+            {/* Footer */}
+            <Footer />
+          </AuthProvider>
         </CartProvider>
       </body>
     </html>
