@@ -1,12 +1,13 @@
+// src/app/create-demo-kit/page.tsx
 "use client";
 
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
-import { useCart } from "@/context/CartContext"; // ✅ Cart hook
+import { useCart } from "@/context/CartContext";
+import { useAuth } from "../context/AuthContext"; // ✅ relative path fix
 
-// Placeholder SVG
 const PLACEHOLDER_SVG =
   "data:image/svg+xml;utf8," +
   encodeURIComponent(`
@@ -17,6 +18,7 @@ const PLACEHOLDER_SVG =
     Demo Product Image
   </text>
 </svg>`);
+
 
 export default function CreateDemoKitPage() {
   const [products, setProducts] = useState<any[]>([]);
@@ -31,9 +33,21 @@ export default function CreateDemoKitPage() {
   });
 
   const router = useRouter();
-  const { addToCart, openCart } = useCart(); // ✅ Cart actions
+  /**
+   * 🔒 AUTH CHECK (only for this page)
+   */
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      if (!data.session) {
+        router.push("/login?redirect=/create-demo-kit");
+      }
+    });
+  }, [router]);
 
-  // Fetch products
+  const { addToCart, openCart } = useCart();
+  const { role } = useAuth();
+
+  // Fetch products from Supabase
   useEffect(() => {
     const fetchProducts = async () => {
       const { data, error } = await supabase
@@ -59,7 +73,6 @@ export default function CreateDemoKitPage() {
     });
   };
 
-  // Apply filters
   const filteredProducts = products.filter((product) => {
     if (
       selectedFilters.formFactor.length &&
@@ -114,7 +127,7 @@ export default function CreateDemoKitPage() {
         />
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
+      <div className="max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-6">
         {/* Filters */}
         <aside className="bg-white rounded-2xl shadow p-5 space-y-4">
           <FilterGroup
@@ -173,16 +186,28 @@ export default function CreateDemoKitPage() {
           />
         </aside>
 
-        {/* Products */}
-        <section>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
+        {/* Products Section */}
+        <section className="flex flex-col">
+          {/* Top-right Add Product button */}
+          {role === "admin" && (
+            <div className="flex justify-end mb-4">
+              <button
+                onClick={() => router.push("/create-demo-kit/add")}
+                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition text-sm"
+              >
+                Add Product
+              </button>
+            </div>
+          )}
+
+          {/* Products Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {filteredProducts.map((product) => (
               <div
                 key={product.id}
                 className="bg-white rounded-2xl shadow hover:shadow-lg transition flex flex-col group"
               >
-                <div className="w-full h-[240px] relative rounded-t-2xl overflow-hidden">
-                  {/* 5G Badge Image */}
+                <div className="w-full h-[200px] relative rounded-t-2xl overflow-hidden">
                   {product.five_g && (
                     <Image
                       src="/5g-logo.png"
@@ -192,8 +217,6 @@ export default function CreateDemoKitPage() {
                       className="absolute top-2 right-2 z-10"
                     />
                   )}
-
-                  {/* Product Image */}
                   <Image
                     src={product.image_url || PLACEHOLDER_SVG}
                     alt={product.product_name}
@@ -211,8 +234,6 @@ export default function CreateDemoKitPage() {
                     <h3 className="font-medium text-sm">{product.product_name}</h3>
                     <p className="text-xs text-gray-500">SKU: {product.sku}</p>
                   </div>
-
-                  {/* ✅ Add to Cart Button with default quantity */}
                   <button
                     onClick={() => {
                       addToCart({
@@ -221,7 +242,7 @@ export default function CreateDemoKitPage() {
                         image_url: product.image_url,
                         sku: product.sku,
                         slug: product.slug,
-                        quantity: 1, // ✅ Default quantity
+                        quantity: 1,
                       });
                       openCart();
                     }}
@@ -265,9 +286,7 @@ function FilterGroup({
         className="flex w-full items-center justify-between text-sm font-semibold"
       >
         <span>{title}</span>
-        <span
-          className={`transform transition-transform ${open ? "rotate-180" : ""}`}
-        >
+        <span className={`transform transition-transform ${open ? "rotate-180" : ""}`}>
           <svg
             width="16"
             height="16"

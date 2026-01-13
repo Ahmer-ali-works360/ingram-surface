@@ -10,6 +10,7 @@ interface AuthContextType {
   status: string | null;
   loading: boolean;
   setUser: (user: any | null) => void;
+  setRole: (role: string | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -20,38 +21,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [status, setStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // ✅ Function to fetch user profile from Supabase
   const fetchProfile = async (userData: any) => {
     try {
-      const { data: profileData, error } = await supabase
+      const { data: profileData } = await supabase
         .from("profiles")
         .select("role, status")
         .eq("id", userData.id)
         .single();
 
-      if (error) {
-        console.error("Error fetching profile:", error.message);
-        setRole(null);
-        setStatus(null);
-      } else {
+      if (profileData) {
         setRole(profileData.role);
         setStatus(profileData.status);
-        console.log("AuthContext - Fetched role:", profileData.role);
+      } else {
+        setRole(null);
+        setStatus(null);
       }
-    } catch (err) {
-      console.error("Unexpected error fetching profile:", err);
+    } catch {
       setRole(null);
       setStatus(null);
     }
   };
 
   useEffect(() => {
-    setLoading(true);
-
-    // ✅ Get initial session
     const getSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-
       if (session?.user) {
         setUser(session.user);
         await fetchProfile(session.user);
@@ -60,38 +53,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setRole(null);
         setStatus(null);
       }
-
       setLoading(false);
     };
 
     getSession();
 
-    // ✅ Listen for login/logout events
-    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_OUT") {
+        setUser(null);
+        setRole(null);
+        setStatus(null);
+      }
       if (session?.user) {
         setUser(session.user);
-        setLoading(true);
-        await fetchProfile(session.user); // ✅ fetch role immediately after login
-        setLoading(false);
+        await fetchProfile(session.user);
       } else {
         setUser(null);
         setRole(null);
         setStatus(null);
-        setLoading(false);
       }
+      setLoading(false);
     });
 
     return () => listener.subscription.unsubscribe();
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, role, status, loading, setUser }}>
+    <AuthContext.Provider value={{ user, role, status, loading, setUser, setRole }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-// Custom hook for using auth context
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) throw new Error("useAuth must be used within AuthProvider");
