@@ -123,12 +123,12 @@ export default function Navbar() {
                 </>
               ) : (
                 <>
-                  <Link href="/change-password" className="block w-full px-3 py-3 rounded-t hover:bg-[#2B3F50] hover:text-white transition-colors">
+                  {/* <Link href="/change-password" className="block w-full px-3 py-3 rounded-t hover:bg-[#2B3F50] hover:text-white transition-colors">
                     Password Reset
-                  </Link>
+                  </Link> */}
                   <button
                     onClick={handleLogout}
-                    className="block w-full px-3 py-3 rounded-b hover:bg-[#2B3F50] hover:text-white transition-colors bg-transparent border-none text-left"
+                    className="block w-full px-3 py-3 rounded hover:bg-[#2B3F50] hover:text-white transition-colors bg-transparent border-none text-left"
                   >
                     Logout
                   </button>
