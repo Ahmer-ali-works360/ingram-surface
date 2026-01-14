@@ -1,4 +1,3 @@
-// src/app/context/AuthContext.tsx
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
@@ -46,8 +45,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const getSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-        setUser(session.user);
-        await fetchProfile(session.user);
+        if (session.expires_at && session.expires_at * 1000 < Date.now()) {
+          setUser(null);
+          setRole(null);
+          setStatus(null);
+        } else {
+          setUser(session.user);
+          await fetchProfile(session.user);
+        }
       } else {
         setUser(null);
         setRole(null);
@@ -63,7 +68,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(null);
         setRole(null);
         setStatus(null);
+
+        // ✅ Explicitly clear Supabase tokens
+        try {
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith("sb-") && key.endsWith("-auth-token")) {
+              localStorage.removeItem(key);
+            }
+          }
+        } catch (e) {
+          console.warn("Token cleanup warning:", e);
+        }
       }
+
       if (session?.user) {
         setUser(session.user);
         await fetchProfile(session.user);

@@ -1,18 +1,16 @@
-//src/app/components/nabvar.js
+//src/app/components/Navbar.js
 
 "use client";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 import { FiSearch, FiUser, FiChevronDown, FiShoppingCart, FiBell } from "react-icons/fi";
 import { supabase } from "@/lib/supabaseClient";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/app/context/AuthContext";
 
 export default function Navbar() {
-  const router = useRouter();
   const { cartItems, openCart } = useCart();
   const { role, user, setUser, setRole } = useAuth();
 
@@ -23,16 +21,28 @@ export default function Navbar() {
   }, []);
 
   const handleLogout = async () => {
-    // ✅ Turant context clear karo
     setUser(null);
     setRole(null);
 
-    const { error } = await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut({ scope: "global" });
     if (error) {
       console.error("Logout error:", error.message);
-    } else {
-      router.push("/login"); // redirect to login
     }
+
+    // ✅ Explicitly clear Supabase tokens
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith("sb-") && key.endsWith("-auth-token")) {
+          localStorage.removeItem(key);
+        }
+      }
+    } catch (e) {
+      console.warn("Token cleanup warning:", e);
+    }
+
+    // ✅ Hard redirect
+    window.location.href = "/login";
   };
 
   if (!mounted) return null;
