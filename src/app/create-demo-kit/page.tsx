@@ -6,7 +6,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
-import { useAuth } from "../context/AuthContext"; // ✅ relative path fix
+import { useAuth } from "../context/AuthContext";
 
 const PLACEHOLDER_SVG =
   "data:image/svg+xml;utf8," +
@@ -19,9 +19,9 @@ const PLACEHOLDER_SVG =
   </text>
 </svg>`);
 
-
 export default function CreateDemoKitPage() {
   const [products, setProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
   const [selectedFilters, setSelectedFilters] = useState({
     formFactor: [] as string[],
     processor: [] as string[],
@@ -33,9 +33,10 @@ export default function CreateDemoKitPage() {
   });
 
   const router = useRouter();
-  /**
-   * 🔒 AUTH CHECK (only for this page)
-   */
+  const { addToCart, openCart } = useCart();
+  const { role } = useAuth();
+
+  // 🔒 AUTH CHECK
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       if (!data.session) {
@@ -44,12 +45,11 @@ export default function CreateDemoKitPage() {
     });
   }, [router]);
 
-  const { addToCart, openCart } = useCart();
-  const { role } = useAuth();
-
-  // Fetch products from Supabase
+  // ✅ FETCH PRODUCTS (NO FILTERS HERE)
   useEffect(() => {
     const fetchProducts = async () => {
+      setLoading(true);
+
       const { data, error } = await supabase
         .from("products")
         .select("*")
@@ -57,7 +57,10 @@ export default function CreateDemoKitPage() {
 
       if (error) console.error("Error fetching products:", error);
       else setProducts(data || []);
+
+      setLoading(false);
     };
+
     fetchProducts();
   }, []);
 
@@ -73,40 +76,47 @@ export default function CreateDemoKitPage() {
     });
   };
 
+  // ✅ CLIENT SIDE FILTERING (FIXED)
   const filteredProducts = products.filter((product) => {
     if (
       selectedFilters.formFactor.length &&
       !selectedFilters.formFactor.includes(product.form_factor)
     )
       return false;
+
     if (
       selectedFilters.processor.length &&
       !selectedFilters.processor.includes(product.processor)
     )
       return false;
+
     if (
       selectedFilters.screenSize.length &&
       !selectedFilters.screenSize.includes(product.screen_size)
     )
       return false;
+
     if (
       selectedFilters.memory.length &&
-      !selectedFilters.memory.includes(product.memory)
+      (!product.memory || !selectedFilters.memory.includes(product.memory))
     )
       return false;
+
     if (
       selectedFilters.storage.length &&
-      !selectedFilters.storage.includes(product.storage)
+      (!product.storage || !selectedFilters.storage.includes(product.storage))
     )
       return false;
+
     if (
       selectedFilters.copilot.length &&
-      (product.copilot ? "Yes" : "No") !== selectedFilters.copilot[0]
+      !selectedFilters.copilot.includes(product.copilot ? "Yes" : "No")
     )
       return false;
+
     if (
       selectedFilters.fiveG.length &&
-      (product.five_g ? "Yes" : "No") !== selectedFilters.fiveG[0]
+      !selectedFilters.fiveG.includes(product.five_g ? "Yes" : "No")
     )
       return false;
 
@@ -188,11 +198,10 @@ export default function CreateDemoKitPage() {
 
         {/* Products Section */}
         <section className="flex flex-col">
-          {/* Top-right Add Product button */}
           {role === "admin" && (
             <div className="flex justify-end mb-4">
               <button
-                onClick={() => router.push("/create-demo-kit/add")}
+                onClick={() => router.push("/add-product")}
                 className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition text-sm"
               >
                 Add Product
@@ -200,60 +209,67 @@ export default function CreateDemoKitPage() {
             </div>
           )}
 
-          {/* Products Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {filteredProducts.map((product) => (
-              <div
-                key={product.id}
-                className="bg-white rounded-2xl shadow hover:shadow-lg transition flex flex-col group"
-              >
-                <div className="w-full h-[200px] relative rounded-t-2xl overflow-hidden">
-                  {product.five_g && (
+          {loading ? (
+            <p className="text-center py-10 text-gray-500">Loading products...</p>
+          ) : filteredProducts.length === 0 ? (
+            <p className="text-center py-10 text-gray-500">
+              No products found for selected filters.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {filteredProducts.map((product) => (
+                <div
+                  key={product.id}
+                  className="bg-white rounded-2xl shadow hover:shadow-lg transition flex flex-col group"
+                >
+                  <div className="w-full h-[200px] relative rounded-t-2xl overflow-hidden">
+                    {product.five_g && (
+                      <Image
+                        src="/5g-logo.png"
+                        alt="5G Badge"
+                        width={40}
+                        height={40}
+                        className="absolute top-2 right-2 z-10"
+                      />
+                    )}
                     <Image
-                      src="/5g-logo.png"
-                      alt="5G Badge"
-                      width={40}
-                      height={40}
-                      className="absolute top-2 right-2 z-10"
+                      src={product.thumbnail_url || PLACEHOLDER_SVG}
+                      alt={product.product_name}
+                      fill
+                      className="object-cover cursor-pointer transition-transform duration-300 group-hover:scale-105"
+                      onClick={() => {
+                        if (!product.slug) return;
+                        router.push(`/product/${product.slug}`);
+                      }}
                     />
-                  )}
-                  <Image
-                    src={product.image_url || PLACEHOLDER_SVG}
-                    alt={product.product_name}
-                    fill
-                    className="object-cover cursor-pointer transition-transform duration-300 group-hover:scale-105"
-                    onClick={() => {
-                      if (!product.slug) return;
-                      router.push(`/product/${product.slug}`);
-                    }}
-                  />
-                </div>
-
-                <div className="p-4 flex-1 flex flex-col justify-between">
-                  <div>
-                    <h3 className="font-medium text-sm">{product.product_name}</h3>
-                    <p className="text-xs text-gray-500">SKU: {product.sku}</p>
                   </div>
-                  <button
-                    onClick={() => {
-                      addToCart({
-                        id: product.id,
-                        product_name: product.product_name,
-                        image_url: product.image_url,
-                        sku: product.sku,
-                        slug: product.slug,
-                        quantity: 1,
-                      });
-                      openCart();
-                    }}
-                    className="mt-3 w-full bg-yellow-400 text-black py-2 rounded hover:bg-yellow-500 transition text-sm"
-                  >
-                    Add to Cart
-                  </button>
+
+                  <div className="p-4 flex-1 flex flex-col justify-between">
+                    <div>
+                      <h3 className="font-medium text-sm">{product.product_name}</h3>
+                      <p className="text-xs text-gray-500">SKU: {product.sku}</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        addToCart({
+                          id: product.id,
+                          product_name: product.product_name,
+                          image_url: product.thumbnail_url,
+                          sku: product.sku,
+                          slug: product.slug,
+                          quantity: 1,
+                        });
+                        openCart();
+                      }}
+                      className="mt-3 w-full bg-yellow-400 text-black py-2 rounded hover:bg-yellow-500 transition text-sm"
+                    >
+                      Add to Cart
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </section>
       </div>
     </div>

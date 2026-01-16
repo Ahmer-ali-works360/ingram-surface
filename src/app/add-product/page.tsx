@@ -1,88 +1,216 @@
-// src/app/add-product/page.tsx
 "use client";
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabaseClient";
+import slugify from "slugify";
 
-/* ===== FIX: Selected State Type ===== */
 type SelectedState = {
-    brand: string;
-    processor: string;
-    generation: string;
-    memory: string;
-    storage: string;
-    fiveg: string;
-    copilot: string;
-    status: string;
-    OS: string;
-    formFactor: string;
-    screen: string;
+  brand: string;
+  processor: string;
+  generation: string;
+  memory: string;
+  storage: string;
+  fiveg: string;
+  copilot: string;
+  status: string;
+  OS: string;
+  formFactor: string;
+  screen: string;
 };
 
 export default function AddProductPage() {
-    const router = useRouter();
+  const router = useRouter();
 
-    // Custom input toggles
-    const [customBrand, setCustomBrand] = useState(false);
-    const [customProcessor, setCustomProcessor] = useState(false);
-    const [customFormFactor, setCustomFormFactor] = useState(false);
-    const [customScreen, setCustomScreen] = useState(false);
-    const [customMemory, setCustomMemory] = useState(false);
-    const [customGeneration, setCustomGeneration] = useState(false);
-    const [customStorage, setCustomStorage] = useState(false);
-    const [CustomOS, setCustomOS] = useState(false);
+  const [customBrand, setCustomBrand] = useState(false);
+  const [customProcessor, setCustomProcessor] = useState(false);
+  const [customGeneration, setCustomGeneration] = useState(false);
+  const [customFormFactor, setCustomFormFactor] = useState(false);
+  const [customScreen, setCustomScreen] = useState(false);
+  const [customMemory, setCustomMemory] = useState(false);
+  const [customStorage, setCustomStorage] = useState(false);
+  const [customOS, setcustomOS] = useState(false);
 
-    // State to handle selection per field (like checkbox behavior)
-    const [selected, setSelected] = useState<SelectedState>({
-        brand: "",
-        processor: "",
-        generation: "",
-        memory: "",
-        storage: "",
-        fiveg: "",
-        copilot: "",
-        status: "",
-        OS: "",
-        formFactor: "",
-        screen: "",
-    });
+  const [selected, setSelected] = useState<SelectedState>({
+    brand: "",
+    processor: "",
+    generation: "",
+    memory: "",
+    storage: "",
+    fiveg: "",
+    copilot: "",
+    status: "",
+    OS: "",
+    formFactor: "",
+    screen: "",
+  });
 
-    // Refs for file inputs
-    const thumbnailRef = useRef<HTMLInputElement>(null);
-    const galleryRef = useRef<HTMLInputElement>(null);
+  const [productName, setProductName] = useState("");
+  const [sku, setSku] = useState("");
+  const [technologies, setTechnologies] = useState("");
+  const [totalInventory, setTotalInventory] = useState<number | "">("");
+  const [inventoryType, setInventoryType] = useState("");
+  const [stockQuantity, setStockQuantity] = useState<number | "">("");
+  const [publishDate, setPublishDate] = useState("");
+  const [description, setDescription] = useState("");
 
-    // State for uploaded images
-    const [thumbnail, setThumbnail] = useState<File | null>(null);
-    const [gallery, setGallery] = useState<File[]>([]);
+  const thumbnailRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
 
-    // ===== FIX: field is now keyof SelectedState =====
-    const handleSelect = (field: keyof SelectedState, value: string) => {
-        setSelected((prev) => ({
-            ...prev,
-            [field]: prev[field] === value ? "" : value, // toggle
-        }));
-    };
+  // 🔒 prevent duplicate submit
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // File upload handlers
-    const handleThumbnailClick = () => {
-        thumbnailRef.current?.click();
-    };
+  const [thumbnail, setThumbnail] = useState<File | null>(null);
+  const [gallery, setGallery] = useState<File[]>([]);
 
-    const handleGalleryClick = () => {
-        galleryRef.current?.click();
-    };
+  const handleSelect = (field: keyof SelectedState, value: string) => {
+    setSelected((prev) => ({
+      ...prev,
+      [field]: prev[field] === value ? "" : value,
+    }));
+  };
 
-    const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            setThumbnail(e.target.files[0]);
+  const handleThumbnailClick = () => thumbnailRef.current?.click();
+  const handleGalleryClick = () => galleryRef.current?.click();
+
+  const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setThumbnail(e.target.files[0]);
+    }
+  };
+
+  const handleGalleryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const files = Array.from(e.target.files);
+      setGallery((prev) => {
+        const combined = [...prev, ...files];
+        if (combined.length > 5) {
+          alert("Maximum 5 images allowed");
+          return combined.slice(0, 5);
         }
-    };
+        return combined;
+      });
+    }
+  };
 
-    const handleGalleryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files) {
-            setGallery(Array.from(e.target.files));
+  const handleSubmit = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
+    console.count("HANDLE SUBMIT CALLED");
+
+    if (!productName || !sku) {
+      alert("Product name and SKU are required");
+      setIsSubmitting(false);
+      return;
+    }
+
+    try {
+      console.log("=== DEBUG: Inputs before upload ===");
+      console.log("Product Name:", productName);
+      console.log("SKU:", sku);
+      console.log("Technologies:", technologies);
+      console.log("Total Inventory:", totalInventory);
+      console.log("Inventory Type:", inventoryType);
+      console.log("Stock Quantity:", stockQuantity);
+      console.log("Publish Date:", publishDate);
+      console.log("Description:", description);
+      console.log("Selected Options:", selected);
+      console.log("Custom Toggles:", {
+        customBrand,
+        customProcessor,
+        customFormFactor,
+        customScreen,
+        customMemory,
+        customGeneration,
+        customStorage,
+        customOS,
+      });
+      console.log("Thumbnail File:", thumbnail);
+      console.log("Gallery Files:", gallery);
+
+      // ===== Upload Thumbnail =====
+      let thumbnailUrl: string | null = null;
+      if (thumbnail) {
+        try {
+          const safeFileName = thumbnail.name.replace(/\s/g, "_");
+          const { data, error } = await supabase.storage
+            .from("product-images")
+            .upload(`thumbnails/${Date.now()}_${safeFileName}`, thumbnail);
+
+          if (error) throw error;
+
+          thumbnailUrl = supabase.storage
+            .from("product-images")
+            .getPublicUrl(data.path).data.publicUrl;
+        } catch (err) {
+          console.error("Thumbnail upload failed:", err);
         }
-    };
+      }
+
+      // ===== Upload Gallery =====
+      let galleryUrls: string[] = [];
+      for (const file of gallery) {
+        try {
+          const safeFileName = file.name.replace(/\s/g, "_");
+          const { data, error } = await supabase.storage
+            .from("product-images")
+            .upload(`gallery-images/${Date.now()}_${safeFileName}`, file);
+
+          if (error) throw error;
+
+          const url = supabase.storage
+            .from("product-images")
+            .getPublicUrl(data.path).data.publicUrl;
+
+          galleryUrls.push(url);
+        } catch (err) {
+          console.error("Gallery upload failed for file:", file.name, err);
+        }
+      }
+
+      const newProduct = {
+        product_name: productName,
+        slug: slugify(productName, { lower: true, strict: true }),
+        sku,
+        brand: selected.brand || null,
+        form_factor: selected.formFactor || null,
+        processor: selected.processor || null,
+        generation: selected.generation || null,
+        memory: selected.memory || null,
+        storage: selected.storage || null,
+        copilot: selected.copilot === "Yes",
+        five_g: selected.fiveg === "Yes",
+        status: selected.status || null,
+        OS: selected.OS || null,
+        screen_size: selected.screen || null,
+        technologies: technologies || null,
+        inventory: totalInventory || null,
+        inventory_type: inventoryType || null,
+        stock_quantity: stockQuantity || null,
+        publish_date: publishDate || null,
+        description: description || null,
+        thumbnail_url: thumbnailUrl,
+        gallery_urls: galleryUrls.length > 0 ? galleryUrls : null,
+      };
+
+      console.log("=== DEBUG: Product to insert ===");
+      console.log(newProduct);
+
+      const { error } = await supabase.from("products").insert(newProduct);
+      if (error) throw error;
+
+      alert("Product added successfully!");
+      router.push("/create-demo-kit");
+
+    } catch (err: any) {
+      console.error("=== INSERT ERROR ===", err);
+      alert("Error adding product: " + err.message);
+
+    } finally {
+      setIsSubmitting(false); // 🔥 FIX
+    }
+  };
 
     return (
         <div className="max-w-7xl mx-auto p-6 bg-gray-50 min-h-screen">
@@ -98,124 +226,124 @@ export default function AddProductPage() {
             </div>
 
             {/* Product Images */}
-<div className="bg-white rounded-xl shadow p-6 mb-6">
-    <h2 className="font-medium mb-4 flex items-center gap-2">
-        Product Images
-    </h2>
-    <p className="text-xs text-gray-400 mb-4">Supported: PNG, JPG, WEBP</p>
+            <div className="bg-white rounded-xl shadow p-6 mb-6">
+                <h2 className="font-medium mb-4 flex items-center gap-2">
+                    Product Images
+                </h2>
+                <p className="text-xs text-gray-400 mb-4">Supported: PNG, JPG, WEBP</p>
 
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Primary Thumbnail */}
-        <div
-            onClick={!thumbnail ? handleThumbnailClick : undefined}
-            className="relative bg-gray-300 border border-dashed rounded-lg p-4 flex flex-col items-center justify-center cursor-pointer hover:border-gray-600 transition"
-        >
-            {thumbnail ? (
-                <>
-                    {/* Remove Thumbnail */}
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            setThumbnail(null);
-                            if (thumbnailRef.current) {
-                                thumbnailRef.current.value = "";
-                            }
-                        }}
-                        className="absolute top-2 right-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs"
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Primary Thumbnail */}
+                    <div
+                        onClick={!thumbnail ? handleThumbnailClick : undefined}
+                        className="relative bg-gray-300 border border-dashed rounded-lg p-4 flex flex-col items-center justify-center cursor-pointer hover:border-gray-600 transition"
                     >
-                        ✕
-                    </button>
+                        {thumbnail ? (
+                            <>
+                                {/* Remove Thumbnail */}
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setThumbnail(null);
+                                        if (thumbnailRef.current) {
+                                            thumbnailRef.current.value = "";
+                                        }
+                                    }}
+                                    className="absolute top-2 right-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs"
+                                >
+                                    ✕
+                                </button>
 
-                    <img
-                        src={URL.createObjectURL(thumbnail)}
-                        alt="Thumbnail"
-                        className="w-20 h-20 object-cover mb-2"
-                    />
-                </>
-            ) : (
-                <div className="bg-gray-300 w-12 h-12 flex items-center justify-center rounded mb-2">
-                    <img src="/upload-icon.png" alt="Upload" className="w-10 h-10" />
-                </div>
-            )}
+                                <img
+                                    src={URL.createObjectURL(thumbnail)}
+                                    alt="Thumbnail"
+                                    className="w-20 h-20 object-cover mb-2"
+                                />
+                            </>
+                        ) : (
+                            <div className="bg-gray-300 w-12 h-12 flex items-center justify-center rounded mb-2">
+                                <img src="/upload-icon.png" alt="Upload" className="w-10 h-10" />
+                            </div>
+                        )}
 
-            <p className="text-sm font-medium text-gray-600">Thumbnail Image</p>
-            <p className="text-xs text-gray-400">Click to upload (Max 10MB)</p>
+                        <p className="text-sm font-medium text-gray-600">Thumbnail Image</p>
+                        <p className="text-xs text-gray-400">Click to upload (Max 10MB)</p>
 
-            <input
-                type="file"
-                accept="image/*"
-                ref={thumbnailRef}
-                className="hidden"
-                onChange={handleThumbnailChange}
-            />
-        </div>
+                        <input
+                            type="file"
+                            accept="image/*"
+                            ref={thumbnailRef}
+                            className="hidden"
+                            onChange={handleThumbnailChange}
+                        />
+                    </div>
 
-        {/* Gallery Images */}
-        <div
-            onClick={handleGalleryClick}
-            className="bg-gray-300 border border-dashed rounded-lg p-4 flex flex-col items-center justify-center cursor-pointer hover:border-gray-600 transition"
-        >
-            <div className="bg-gray-300 w-12 h-12 flex items-center justify-center rounded mb-2">
-                <img
-                    src="/upload-gallery.png"
-                    alt="Upload Gallery"
-                    className="w-6 h-6 object-contain"
-                />
-            </div>
-
-            <p className="text-sm font-medium text-gray-600">Additional Images</p>
-            <p className="text-xs text-gray-400">Add more images (Max 5)</p>
-
-            {gallery.length > 0 && (
-                <div className="flex gap-2 mt-2 flex-wrap">
-                    {gallery.map((file, idx) => (
-                        <div key={idx} className="relative">
-                            {/* Remove Gallery Image */}
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setGallery((prev) =>
-                                        prev.filter((_, i) => i !== idx)
-                                    );
-                                }}
-                                className="absolute -top-2 -right-2 bg-red-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs"
-                            >
-                                ✕
-                            </button>
-
+                    {/* Gallery Images */}
+                    <div
+                        onClick={handleGalleryClick}
+                        className="bg-gray-300 border border-dashed rounded-lg p-4 flex flex-col items-center justify-center cursor-pointer hover:border-gray-600 transition"
+                    >
+                        <div className="bg-gray-300 w-12 h-12 flex items-center justify-center rounded mb-2">
                             <img
-                                src={URL.createObjectURL(file)}
-                                alt={`Gallery ${idx}`}
-                                className="w-12 h-12 object-cover rounded"
+                                src="/upload-gallery.png"
+                                alt="Upload Gallery"
+                                className="w-6 h-6 object-contain"
                             />
                         </div>
-                    ))}
-                </div>
-            )}
 
-            {/* Gallery Input */}
-            <input
-                type="file"
-                multiple
-                accept="image/*"
-                ref={galleryRef}
-                className="hidden"
-                onChange={(e) => {
-                    const files = e.target.files ? Array.from(e.target.files) : [];
-                    // Max 5 images
-                    setGallery((prev) => {
-                        const combined = [...prev, ...files];
-                        if (combined.length > 5) {
-                            alert("Maximum 5 images allowed");
-                            return combined.slice(0, 5);
-                        }
-                        return combined;
-                    });
-                }}
-            />
-        </div>
-    </div>
-</div>
+                        <p className="text-sm font-medium text-gray-600">Additional Images</p>
+                        <p className="text-xs text-gray-400">Add more images (Max 5)</p>
+
+                        {gallery.length > 0 && (
+                            <div className="flex gap-2 mt-2 flex-wrap">
+                                {gallery.map((file, idx) => (
+                                    <div key={idx} className="relative">
+                                        {/* Remove Gallery Image */}
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setGallery((prev) =>
+                                                    prev.filter((_, i) => i !== idx)
+                                                );
+                                            }}
+                                            className="absolute -top-2 -right-2 bg-red-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs"
+                                        >
+                                            ✕
+                                        </button>
+
+                                        <img
+                                            src={URL.createObjectURL(file)}
+                                            alt={`Gallery ${idx}`}
+                                            className="w-12 h-12 object-cover rounded"
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Gallery Input */}
+                        <input
+                            type="file"
+                            multiple
+                            accept="image/*"
+                            ref={galleryRef}
+                            className="hidden"
+                            onChange={(e) => {
+                                const files = e.target.files ? Array.from(e.target.files) : [];
+                                // Max 5 images
+                                setGallery((prev) => {
+                                    const combined = [...prev, ...files];
+                                    if (combined.length > 5) {
+                                        alert("Maximum 5 images allowed");
+                                        return combined.slice(0, 5);
+                                    }
+                                    return combined;
+                                });
+                            }}
+                        />
+                    </div>
+                </div>
+            </div>
 
 
             {/* Form */}
@@ -224,13 +352,14 @@ export default function AddProductPage() {
                     {/* Product Name */}
                     <div>
                         <p className="text-sm font-medium mb-2">Product Name</p>
-                        <input className="w-full border rounded px-3 py-2 text-sm" />
+                        <input className="w-full border rounded px-3 py-2 text-sm" value={productName} onChange={(e) => setProductName(e.target.value)} />
                     </div>
 
                     {/* SKU */}
                     <div>
                         <p className="text-sm font-medium mb-2">SKU</p>
-                        <input className="w-full border rounded px-3 py-2 text-sm" />
+                        <input className="w-full border rounded px-3 py-2 text-sm"
+                        value={sku} onChange={(e) => setSku(e.target.value)} />
                     </div>
 
                     {/* OEM Brand */}
@@ -253,7 +382,16 @@ export default function AddProductPage() {
                                 </label>
                             ))}
                         </div>
-                        {customBrand && <input className="mt-2 w-full border rounded px-3 py-2 text-sm" />}
+                        {customBrand && (
+                            <input
+                                className="mt-2 w-full border rounded px-3 py-2 text-sm"
+                                value={selected.brand === "Custom" ? "" : selected.brand}
+                                onChange={(e) =>
+                                setSelected((prev) => ({ ...prev, brand: e.target.value }))
+                                }
+                            />
+                            )}
+
                     </div>
 
                     {/* Processor */}
@@ -282,7 +420,15 @@ export default function AddProductPage() {
                                 </label>
                             ))}
                         </div>
-                        {customProcessor && <input className="mt-2 w-full border rounded px-3 py-2 text-sm" />}
+                        {customProcessor && (
+                            <input
+                                className="mt-2 w-full border rounded px-3 py-2 text-sm"
+                                value={selected.processor === "Custom" ? "" : selected.processor}
+                                onChange={(e) =>
+                                setSelected((prev) => ({ ...prev, processor: e.target.value }))
+                                }
+                            />
+                            )}
                     </div>
 
                     {/* Form Factor (Updated style like Processor) */}
@@ -321,9 +467,12 @@ export default function AddProductPage() {
                         {customFormFactor && (
                             <input
                                 className="mt-2 w-full border rounded px-3 py-2 text-sm"
-                                placeholder="Enter custom form factor"
+                                value={selected.formFactor === "Custom" ? "" : selected.formFactor}
+                                onChange={(e) =>
+                                setSelected((prev) => ({ ...prev, formFactor: e.target.value }))
+                                }
                             />
-                        )}
+                            )}
                     </div>
 
                     {/* Generation */}
@@ -346,7 +495,15 @@ export default function AddProductPage() {
                                 </label>
                             ))}
                         </div>
-                        {customGeneration && <input className="mt-2 w-full border rounded px-3 py-2 text-sm" />}
+                        {customGeneration && (
+                            <input
+                                className="mt-2 w-full border rounded px-3 py-2 text-sm"
+                                value={selected.generation === "Custom" ? "" : selected.generation}
+                                onChange={(e) =>
+                                setSelected((prev) => ({ ...prev, generation: e.target.value }))
+                                }
+                            />
+                            )}
                     </div>
 
                     {/* Memory */}
@@ -369,7 +526,15 @@ export default function AddProductPage() {
                                 </label>
                             ))}
                         </div>
-                        {customMemory && <input className="mt-2 w-full border rounded px-3 py-2 text-sm" />}
+                        {customMemory && (
+                            <input
+                                className="mt-2 w-full border rounded px-3 py-2 text-sm"
+                                value={selected.memory === "Custom" ? "" : selected.memory}
+                                onChange={(e) =>
+                                setSelected((prev) => ({ ...prev, memory: e.target.value }))
+                                }
+                            />
+                            )}
                     </div>
 
                     {/* Storage */}
@@ -392,59 +557,90 @@ export default function AddProductPage() {
                                 </label>
                             ))}
                         </div>
-                        {customStorage && <input className="mt-2 w-full border rounded px-3 py-2 text-sm" />}
+                        {customStorage && (
+                            <input
+                                className="mt-2 w-full border rounded px-3 py-2 text-sm"
+                                value={selected.storage === "Custom" ? "" : selected.storage}
+                                onChange={(e) =>
+                                setSelected((prev) => ({ ...prev, storage: e.target.value }))
+                                }
+                            />
+                            )}
                     </div>
 
                     {/* Operating System */}
                     <div>
-                        <p className="text-sm font-medium mb-2">Operating System</p>
-                        <div className="grid grid-cols-3 gap-2 text-sm">
-                            {["Windows 11", "Custom"].map((option) => (
-                                <label key={option} className="flex items-center gap-2 cursor-pointer relative">
-                                    <div
-                                        onClick={() => {
-                                            handleSelect("OS", option);
-                                            setCustomOS(option === "Custom" && selected.OS !== "Custom");
-                                        }}
-                                        className={`w-5 h-5 border border-gray-400 rounded-sm flex items-center justify-center ${selected.storage === option ? "bg-blue-600" : "bg-white"
-                                            }`}
-                                    >
-                                        {selected.OS === option && <span className="text-white text-sm">✓</span>}
-                                    </div>
-                                    <span className="select-none">{option}</span>
-                                </label>
-                            ))}
-                        </div>
-                        {CustomOS && <input className="mt-2 w-full border rounded px-3 py-2 text-sm" />}
+                    <p className="text-sm font-medium mb-2">Operating System</p>
+                    <div className="grid grid-cols-3 gap-2 text-sm">
+                        {["Windows 11", "Custom"].map((option) => (
+                        <label key={option} className="flex items-center gap-2 cursor-pointer relative">
+                            <div
+                            onClick={() => {
+                                handleSelect("OS", option);
+                                setcustomOS(option === "Custom" && selected.OS !== "Custom");
+                            }}
+                            className={`w-5 h-5 border border-gray-400 rounded-sm flex items-center justify-center ${
+                                selected.OS === option ? "bg-blue-600" : "bg-white"
+                            }`}
+                            >
+                            {selected.OS === option && <span className="text-white text-sm">✓</span>}
+                            </div>
+                            <span className="select-none">{option}</span>
+                        </label>
+                        ))}
+                    </div>
+                    {customOS && (
+                    <input
+                        className="mt-2 w-full border rounded px-3 py-2 text-sm"
+                        value={selected.OS === "Custom" ? "" : selected.OS}
+                        onChange={(e) =>
+                        setSelected((prev) => ({ ...prev, OS: e.target.value }))
+                        }
+                    />
+                    )}
                     </div>
 
                     {/* Technologies */}
                     <div>
                         <p className="text-sm font-medium mb-2">Technologies</p>
-                        <input className="w-full border rounded px-3 py-2 text-sm" placeholder="Technologies" />
+                        <input className="w-full border rounded px-3 py-2 text-sm" placeholder="Technologies" value={technologies} onChange={(e) => setTechnologies(e.target.value)} />
                     </div>
 
 
                     {/* Total Inventory */}
                     <div>
                         <p className="text-sm font-medium mb-2">Total Inventory</p>
-                        <input type="number" className="w-full border rounded px-3 py-2 text-sm" />
+                        <input className="w-full border rounded px-3 py-2 text-sm" type="number" value={totalInventory} onChange={(e) => { const val = e.target.value; setTotalInventory(val === "" ? "" : Number(val));}}/>
+
                     </div>
 
                     {/* Inventory Type */}
                     <div>
-                        <p className="text-sm font-medium mb-2">Inventory Type</p>
-                        <select className="w-full border rounded px-3 py-2 text-sm">
-                            <option value="">Select type</option>
-                            <option>Program</option>
-                            <option>Global</option>
-                        </select>
+                    <p className="text-sm font-medium mb-2">Inventory Type</p>
+                    <select
+                        className="w-full border rounded px-3 py-2 text-sm"
+                        value={inventoryType}
+                        onChange={(e) => setInventoryType(e.target.value)}
+                    >
+                        <option value="">Select type</option>
+                        <option value="Program">Program</option>
+                        <option value="Global">Global</option>
+                    </select>
                     </div>
+
 
                     {/* Stock Quantity */}
                     <div>
                         <p className="text-sm font-medium mb-2">Stock Quantity</p>
-                        <input type="number" className="w-full border rounded px-3 py-2 text-sm" />
+                        <input
+                            type="number"
+                            className="w-full border rounded px-3 py-2 text-sm"
+                            value={stockQuantity}
+                            onChange={(e) => {
+                            const val = e.target.value;
+                            setStockQuantity(val === "" ? "" : Number(val));
+                            }}
+                        />
                     </div>
 
                     {/* Screen Size */}
@@ -467,7 +663,15 @@ export default function AddProductPage() {
                                 </label>
                             ))}
                         </div>
-                        {customScreen && <input className="mt-2 w-full border rounded px-3 py-2 text-sm" />}
+                        {customScreen && (
+                            <input
+                                className="mt-2 w-full border rounded px-3 py-2 text-sm"
+                                value={selected.screen === "Custom" ? "" : selected.screen}
+                                onChange={(e) =>
+                                setSelected((prev) => ({ ...prev, screen: e.target.value }))
+                                }
+                            />
+                            )}
                     </div>
 
                     {/* 5G Enabled */}
@@ -530,14 +734,28 @@ export default function AddProductPage() {
                     {/* Publish Date */}
                     <div>
                         <p className="text-sm font-medium mb-2">Publish Date</p>
-                        <input type="date" className="w-full border rounded px-3 py-2 text-sm" />
+                        <input
+                            type="date"
+                            className="w-full border rounded px-3 py-2 text-sm"
+                            value={publishDate}
+                            onChange={(e) => setPublishDate(e.target.value)}
+                        />
                     </div>
-                </div>
+                 </div>
 
-                <textarea className="w-full border rounded px-3 py-2 text-sm mt-6 h-28" />
+                 {/* description */}
+                    <div>
+                    <p className="text-sm font-medium mb-2">Description</p>
+                    <textarea
+                        className="w-full border rounded px-3 py-2 text-sm mt-6 h-28"
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                    />
+                    </div>
 
+                {/* Submit button */}
                 <div className="flex justify-center">
-                    <button className="mt-6 bg-blue-600 text-white px-8 py-2 rounded">
+                    <button className="mt-6 bg-blue-600 text-white px-8 py-2 rounded" onClick={handleSubmit}>
                         Submit
                     </button>
                 </div>
