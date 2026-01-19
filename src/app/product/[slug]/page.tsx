@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/app/context/AuthContext";
+import { useCart } from "@/context/CartContext";
 
 const PLACEHOLDER_SVG =
   "data:image/svg+xml;utf8," +
@@ -19,6 +20,7 @@ const PLACEHOLDER_SVG =
   </svg>`);
 
 export default function ProductPage() {
+  const { addToCart } = useCart();
   const { slug } = useParams();
   const { user } = useAuth();
 
@@ -127,9 +129,8 @@ export default function ProductPage() {
               {gallery.map((url: string, idx: number) => (
                 <div
                   key={idx}
-                  className={`relative w-[80px] h-[80px] rounded-lg overflow-hidden border cursor-pointer ${
-                    selectedIndex === idx ? "border-blue-500" : ""
-                  }`}
+                  className={`relative w-[80px] h-[80px] rounded-lg overflow-hidden border cursor-pointer ${selectedIndex === idx ? "border-blue-500" : ""
+                    }`}
                   onClick={() => {
                     setMainImage(url);
                     setSelectedIndex(idx);
@@ -156,12 +157,9 @@ export default function ProductPage() {
 
             {/* Description as Bullet Points */}
             {product.description ? (
-              <ul className="ml-5 text-gray-700 space-y-2">
+              <ul className="ml-5 list-disc text-gray-700 space-y-2">
                 {product.description.split("\n").map((line: string, idx: number) => (
-                  <li key={idx} className="flex items-start gap-2">
-                    <span className="mt-1 text-blue-500">✔</span>
-                    <span>{line}</span>
-                  </li>
+                  <li key={idx}>{line}</li>
                 ))}
               </ul>
             ) : (
@@ -195,9 +193,8 @@ export default function ProductPage() {
           <p className="text-sm text-gray-600">
             Available Stock:{" "}
             <span
-              className={`font-semibold ${
-                stockQty > 0 ? "text-green-600" : "text-red-500"
-              }`}
+              className={`font-semibold ${stockQty > 0 ? "text-green-600" : "text-red-500"
+                }`}
             >
               {stockQty}
             </span>
@@ -205,9 +202,21 @@ export default function ProductPage() {
 
           {/* IN STOCK */}
           {stockQty > 0 ? (
-            <button className="w-xs bg-yellow-400 text-black py-3 rounded hover:bg-yellow-500 font-semibold">
-              Add to Cart
-            </button>
+              <button
+    className="w-xs bg-yellow-400 text-black py-3 rounded hover:bg-yellow-500 font-semibold"
+    onClick={() =>
+      addToCart({
+        id: product.id,
+        product_name: product.product_name,
+        image_url: mainImage || product.thumbnail_url,
+        sku: product.sku,
+        slug: product.slug,
+        quantity: quantity,
+      })
+    }
+  >
+    Add to Cart
+  </button>
           ) : (
             /* OUT OF STOCK */
             <div className="border rounded-lg p-4 bg-gray-50 space-y-4">
