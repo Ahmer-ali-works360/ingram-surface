@@ -7,7 +7,6 @@ import { supabase } from "@/lib/supabaseClient";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/app/context/AuthContext";
 
-// Inline SVG Placeholder
 const PLACEHOLDER_SVG =
   "data:image/svg+xml;utf8," +
   encodeURIComponent(`
@@ -29,6 +28,12 @@ export default function ProductPage() {
   const [zoomOpen, setZoomOpen] = useState(false);
   const [companyName, setCompanyName] = useState("");
 
+  // Main image state
+  const [mainImage, setMainImage] = useState<string>("");
+
+  // Selected index for gallery
+  const [selectedIndex, setSelectedIndex] = useState<number>(0);
+
   useEffect(() => {
     const fetchProduct = async () => {
       const { data, error } = await supabase
@@ -43,6 +48,9 @@ export default function ProductPage() {
       }
 
       setProduct(data);
+
+      // Set default main image
+      setMainImage(data.thumbnail_url || PLACEHOLDER_SVG);
 
       const relatedQuery = supabase
         .from("products")
@@ -66,6 +74,14 @@ export default function ProductPage() {
     fetchProduct();
   }, [slug]);
 
+  useEffect(() => {
+    if (zoomOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "auto";
+    }
+  }, [zoomOpen]);
+
   if (!product) return <p className="text-center mt-10">Loading...</p>;
 
   const stockQty = product?.stock_quantity ?? 0;
@@ -80,23 +96,56 @@ export default function ProductPage() {
     setQuantity((q) => (q > 1 ? q - 1 : 1));
   };
 
+  // Gallery array with thumbnail included
+  const gallery = [
+    product.thumbnail_url || PLACEHOLDER_SVG,
+    ...(product.gallery_urls || []),
+  ].filter((url: string) => url && url !== "");
+
   return (
     <div className="max-w-6xl mx-auto p-6">
       {/* PRODUCT SECTION */}
       <div className="flex flex-col lg:flex-row gap-10">
         {/* Left: Image */}
-        <div className="lg:w-1/2 w-full flex justify-center">
+        <div className="lg:w-1/2 w-full flex flex-col items-center">
           <div
             className="w-[300px] lg:w-[400px] h-[300px] lg:h-[400px] relative rounded-xl overflow-hidden shadow cursor-zoom-in"
             onClick={() => setZoomOpen(true)}
           >
             <Image
-              src={product.thumbnail_url || PLACEHOLDER_SVG}
+              src={mainImage || PLACEHOLDER_SVG}
               alt={product.product_name}
               fill
               className="object-cover"
+              unoptimized
             />
           </div>
+
+          {/* ====== GALLERY IMAGES ====== */}
+          {gallery.length > 0 && (
+            <div className="mt-6 w-full flex flex-wrap gap-3 justify-center">
+              {gallery.map((url: string, idx: number) => (
+                <div
+                  key={idx}
+                  className={`relative w-[80px] h-[80px] rounded-lg overflow-hidden border cursor-pointer ${
+                    selectedIndex === idx ? "border-blue-500" : ""
+                  }`}
+                  onClick={() => {
+                    setMainImage(url);
+                    setSelectedIndex(idx);
+                  }}
+                >
+                  <Image
+                    src={url}
+                    alt={`Gallery ${idx + 1}`}
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Right: Details */}
@@ -104,9 +153,20 @@ export default function ProductPage() {
           <div className="space-y-3">
             <h1 className="text-3xl font-bold">{product.product_name}</h1>
             <p className="text-gray-500">SKU: {product.sku}</p>
-            <p className="text-gray-700">
-              {product.description || "No description available."}
-            </p>
+
+            {/* Description as Bullet Points */}
+            {product.description ? (
+              <ul className="ml-5 text-gray-700 space-y-2">
+                {product.description.split("\n").map((line: string, idx: number) => (
+                  <li key={idx} className="flex items-start gap-2">
+                    <span className="mt-1 text-blue-500">✔</span>
+                    <span>{line}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-gray-700">No description available.</p>
+            )}
 
             {/* Quantity selector (only if stock > 0) */}
             {stockQty > 0 && (
@@ -151,7 +211,6 @@ export default function ProductPage() {
           ) : (
             /* OUT OF STOCK */
             <div className="border rounded-lg p-4 bg-gray-50 space-y-4">
-              {/* Locked Email */}
               <div>
                 <label className="text-sm font-medium text-gray-600">
                   Email
@@ -164,7 +223,6 @@ export default function ProductPage() {
                 />
               </div>
 
-              {/* Company Name */}
               <div>
                 <label className="text-sm font-medium text-gray-600">
                   Company Name
@@ -178,7 +236,6 @@ export default function ProductPage() {
                 />
               </div>
 
-              {/* Wishlist / Waitlist */}
               <button className="w-full bg-blue-600 text-white py-3 rounded hover:bg-blue-700 font-semibold">
                 Add to Wishlist / Waitlist
               </button>
@@ -195,10 +252,11 @@ export default function ProductPage() {
         >
           <div className="w-[80%] max-w-4xl h-[80%] relative">
             <Image
-              src={product.thumbnail_url || PLACEHOLDER_SVG}
+              src={mainImage || PLACEHOLDER_SVG}
               alt={product.product_name}
               fill
               className="object-contain"
+              unoptimized
             />
           </div>
         </div>
