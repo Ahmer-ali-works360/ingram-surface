@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -61,6 +61,7 @@ const steps = [
 
 export default function HowItWorksPage() {
   const router = useRouter();
+  const [loading, setLoading] = useState(true);
 
   /**
    * 🔒 AUTH CHECK (only for this page)
@@ -69,9 +70,13 @@ export default function HowItWorksPage() {
     supabase.auth.getSession().then(({ data }) => {
       if (!data.session) {
         router.push("/login?redirect=/how-it-works");
+      } else {
+        setLoading(false);
       }
     });
   }, [router]);
+
+  if (loading) return null;
 
   return (
     <section className="py-[88px]">
