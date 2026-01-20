@@ -8,8 +8,10 @@ export default function CheckoutPage() {
     sellerName: "",
     sellerEmail: "",
     opportunityName: "",
-    budget: "",
-    revenue: "",
+    units: "",               // ✅ Device Opportunity Size
+    budget: 1800,            // 🔒 fixed
+    revenue: "",             // ✅ auto calculated
+    ingramAccount: "",
     quote: "",
     segment: "",
     manufacturer: "",
@@ -34,15 +36,31 @@ export default function CheckoutPage() {
       }
 
       if (data?.user?.email) {
-        setForm(prev => ({ ...prev, sellerEmail: data?.user?.email || "" }));
+        setForm(prev => ({ ...prev, sellerEmail: data.user.email || "" }));
       }
     };
 
     fetchUser();
   }, []);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+
+    // ✅ AUTO CALCULATION LOGIC
+    if (name === "units") {
+      const units = Number(value) || 0;
+      const revenue = units * 1800;
+
+      setForm(prev => ({
+        ...prev,
+        units: value,
+        revenue: revenue.toString()
+      }));
+    } else {
+      setForm(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -58,15 +76,14 @@ export default function CheckoutPage() {
         <div className="bg-white border rounded shadow border-gray-300">
           <div className="custom-blue text-white px-4 py-2 font-semibold">Team Details</div>
           <div className="p-4 grid grid-cols-2 gap-4">
-            
+
             <div>
               <label className="block mb-1 font-medium">Seller Contact Name *</label>
               <input
                 name="sellerName"
                 value={form.sellerName}
                 onChange={handleChange}
-                placeholder="Seller Contact Name *"
-                className="border border-gray-300 p-2 rounded focus:border-black outline-none w-full"
+                className="border border-gray-300 p-2 rounded w-full"
               />
             </div>
 
@@ -75,10 +92,8 @@ export default function CheckoutPage() {
               <input
                 name="sellerEmail"
                 value={form.sellerEmail}
-                onChange={handleChange}
-                placeholder="Seller Contact Email *"
-                className="border border-gray-300 p-2 rounded focus:border-black outline-none w-full bg-gray-100"
                 disabled
+                className="border border-gray-300 p-2 rounded bg-gray-100 w-full"
               />
             </div>
           </div>
@@ -90,13 +105,15 @@ export default function CheckoutPage() {
           <div className="p-4 grid grid-cols-2 gap-4">
 
             <div>
-              <label className="block mb-1 font-medium">Opportunity Name *</label>
+              <label className="block mb-1 font-medium">
+                Device Opportunity Size (Units) *
+              </label>
               <input
-                name="opportunityName"
-                value={form.opportunityName}
+                type="number"
+                name="units"
+                value={form.units}
                 onChange={handleChange}
-                placeholder="Revise Opportunity Name *"
-                className="border border-gray-300 p-2 rounded focus:border-black outline-none w-full"
+                className="border border-gray-300 p-2 rounded w-full"
               />
             </div>
 
@@ -104,21 +121,32 @@ export default function CheckoutPage() {
               <label className="block mb-1 font-medium">Budget Per Device ($)</label>
               <input
                 name="budget"
+                placeholder="$1800"
                 value={form.budget}
-                onChange={handleChange}
-                placeholder="Budget Per Device ($)"
-                className="border border-gray-300 p-2 rounded focus:border-black outline-none w-full"
+                disabled
+                className="border border-gray-300 p-2 rounded bg-gray-100 w-full"
               />
             </div>
 
             <div>
-              <label className="block mb-1 font-medium">Revenue Opportunity Sale & Device Plan *</label>
+              <label className="block mb-1 font-medium">
+                Revenue Opportunity Size ($ Device Rev) *
+              </label>
               <input
                 name="revenue"
                 value={form.revenue}
+                readOnly
+                className="border border-gray-300 p-2 rounded bg-gray-100 w-full"
+              />
+            </div>
+
+            <div>
+              <label className="block mb-1 font-medium">Ingram Account # *</label>
+              <input
+                name="ingramAccount"
+                value={form.ingramAccount}
                 onChange={handleChange}
-                placeholder="Revenue Opportunity Sale & Device Plan *"
-                className="border border-gray-300 p-2 rounded focus:border-black outline-none w-full"
+                className="border border-gray-300 p-2 rounded w-full"
               />
             </div>
 
@@ -128,8 +156,7 @@ export default function CheckoutPage() {
                 name="quote"
                 value={form.quote}
                 onChange={handleChange}
-                placeholder="Quote #"
-                className="border border-gray-300 p-2 rounded focus:border-black outline-none w-full"
+                className="border border-gray-300 p-2 rounded w-full"
               />
             </div>
 
@@ -139,11 +166,15 @@ export default function CheckoutPage() {
                 name="segment"
                 value={form.segment}
                 onChange={handleChange}
-                className="border border-gray-300 p-2 rounded focus:border-black outline-none w-full"
+                className="border border-gray-300 p-2 rounded w-full"
               >
-                <option value="">Segment</option>
-                <option value="A">A</option>
-                <option value="B">B</option>
+                <option value="A">Corporate West</option>
+                <option value="B">Corporate Central</option>
+                <option value="C">Corporate East</option>
+                <option value="D">K-12</option>
+                <option value="E">Hi-Ed</option>
+                <option value="F">Healthcare</option>
+                <option value="G">CoreTrust</option>
               </select>
             </div>
 
@@ -153,7 +184,7 @@ export default function CheckoutPage() {
                 name="manufacturer"
                 value={form.manufacturer}
                 onChange={handleChange}
-                className="border border-gray-300 p-2 rounded focus:border-black outline-none w-full"
+                className="border border-gray-300 p-2 rounded w-full"
               >
                 <option value="">Current Manufacturer</option>
                 <option value="X">X</option>
@@ -162,14 +193,16 @@ export default function CheckoutPage() {
             </div>
 
             <div>
-              <label className="block mb-1 font-medium">Is this a reseller opportunity?</label>
+              <label className="block mb-1 font-medium">
+                Is this a reseller opportunity?
+              </label>
               <select
                 name="isReseller"
                 value={form.isReseller}
                 onChange={handleChange}
-                className="border border-gray-300 p-2 rounded focus:border-black outline-none w-full"
+                className="border border-gray-300 p-2 rounded w-full"
               >
-                <option value="">Is this a reseller opportunity?</option>
+                <option value="">Is this a competitive opportunity? *</option>
                 <option value="yes">Yes</option>
                 <option value="no">No</option>
               </select>
@@ -178,7 +211,7 @@ export default function CheckoutPage() {
           </div>
         </div>
 
-        {/* Shipping Details */}
+         {/* Shipping Details */}
         <div className="bg-white border rounded shadow border-gray-300">
           <div className="custom-blue text-white px-4 py-2 font-semibold">Shipping Details</div>
           <div className="p-4 grid grid-cols-2 gap-4">
