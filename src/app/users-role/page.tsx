@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import * as XLSX from "xlsx";
+import { useRouter } from "next/navigation";
 
 type Profile = {
   id: string;
@@ -16,6 +17,8 @@ type Profile = {
 };
 
 export default function UserRolePage() {
+  const router = useRouter();
+
   const [users, setUsers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
@@ -34,6 +37,9 @@ export default function UserRolePage() {
   // Current logged in user role
   const [currentUserRole, setCurrentUserRole] = useState<string>("");
 
+  // **NEW: auth loading**
+  const [authLoading, setAuthLoading] = useState(true);
+
   // Fetch users
   async function fetchUsers() {
     setLoading(true);
@@ -43,7 +49,7 @@ export default function UserRolePage() {
       .select(
         "id, first_name, last_name, email, reseller, role, status, created_at"
       )
-      .eq("status", "approved")  
+      .eq("status", "approved")
       .order("created_at", { ascending: sortAsc });
 
     if (error) {
@@ -72,10 +78,52 @@ export default function UserRolePage() {
     setCurrentUserRole(profileData?.role || "");
   }
 
+  // ----------------------------
+  // 🔒 AUTH + ACCESS CHECK
+  // ----------------------------
   useEffect(() => {
-    fetchUsers();
-    fetchCurrentUser();
-  }, [sortAsc]);
+    const checkAccess = async () => {
+      const { data: sessionData } = await supabase.auth.getSession();
+
+      // if user is not logged in
+      if (!sessionData?.session?.user) {
+        router.replace("/login");
+        return;
+      }
+
+      // fetch role from profiles
+      const { data: profileData, error } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", sessionData.session.user.id)
+        .single();
+
+      if (error) {
+        router.replace("/");
+        return;
+      }
+
+      const role = profileData?.role?.toLowerCase() || "";
+
+      // only admin or program manager can open
+      if (role !== "admin" && role !== "program manager") {
+        router.replace("/");
+        return;
+      }
+
+      // allow page
+      setCurrentUserRole(role);
+      setAuthLoading(false);
+    };
+
+    checkAccess();
+  }, [router]);
+
+  useEffect(() => {
+    if (!authLoading) {
+      fetchUsers();
+    }
+  }, [sortAsc, authLoading]);
 
   // Open modal when role changes
   function handleRoleChange(user: Profile, newRole: string) {
@@ -165,6 +213,9 @@ export default function UserRolePage() {
     window.URL.revokeObjectURL(url);
   }
 
+  // **NEW: prevent page render until auth confirmed**
+  if (authLoading) return null;
+
   return (
     <div className="p-8">
       <h1 className="text-3xl font-semibold mb-6">User Role Management</h1>
@@ -215,7 +266,6 @@ export default function UserRolePage() {
               <th className="px-4 py-3 text-left">Email</th>
               <th className="px-4 py-3 text-left">Reseller</th>
               <th className="px-4 py-3 text-left">Role</th>
-              {/* <th className="px-4 py-3 text-left">Status</th> */}
               <th
                 className="px-4 py-3 text-left cursor-pointer"
                 onClick={() => setSortAsc(!sortAsc)}
@@ -272,8 +322,6 @@ export default function UserRolePage() {
                       <option value="subscriber">Subscriber</option>
                     </select>
                   </td>
-
-                  {/* <td className="px-4 py-3">{user.status}</td> */}
 
                   <td className="px-4 py-3">
                     {new Date(user.created_at).toLocaleString()}
