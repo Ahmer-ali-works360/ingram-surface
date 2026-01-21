@@ -8,6 +8,16 @@ import { useRouter } from "next/navigation";
 export default function CheckoutPage() {
   const { cartItems, totalQuantity } = useCart();
   const router = useRouter();
+   const [authLoading, setAuthLoading] = useState(true);
+     useEffect(() => {
+       supabase.auth.getSession().then(({ data }) => {
+         if (!data.session) {
+           router.replace("/login?redirect=/checkout");
+         } else {
+           setAuthLoading(false);
+         }
+       });
+     }, [router]);
 
   const [form, setForm] = useState({
     sellerName: "",
@@ -118,6 +128,8 @@ export default function CheckoutPage() {
       </div>
     );
   }
+
+   if (authLoading) return null;
 
   return (
     <div className="max-w-6xl mx-auto p-4">
