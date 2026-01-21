@@ -2,8 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { useCart } from "@/context/CartContext";
+import { useRouter } from "next/navigation";
 
 export default function CheckoutPage() {
+  const { cartItems, totalQuantity } = useCart();
+  const router = useRouter();
+
   const [form, setForm] = useState({
     sellerName: "",
     sellerEmail: "",
@@ -27,6 +32,9 @@ export default function CheckoutPage() {
     notes: ""
   });
 
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMessage, setModalMessage] = useState("");
+
   useEffect(() => {
     const fetchUser = async () => {
       const { data, error } = await supabase.auth.getUser();
@@ -42,6 +50,27 @@ export default function CheckoutPage() {
 
     fetchUser();
   }, []);
+
+  // ---------------------------
+  // Checkout Guard Logic
+  // ---------------------------
+  useEffect(() => {
+    // cart empty
+    if (cartItems.length === 0) {
+      setModalMessage("Your cart is empty. Please add product(s) first.");
+      setIsModalOpen(true);
+      return;
+    }
+
+    // quantity exceeded
+    if (totalQuantity > 3) {
+      setModalMessage(
+        "Your cart limit exceeded. Please update cart (max 3 total items)."
+      );
+      setIsModalOpen(true);
+      return;
+    }
+  }, [cartItems, totalQuantity]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -67,6 +96,28 @@ export default function CheckoutPage() {
     e.preventDefault();
     console.log(form);
   };
+
+  // ---------------------------
+  // If modal is open, don't show checkout form
+  // ---------------------------
+  if (isModalOpen) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/40" />
+
+        <div className="bg-white rounded-lg p-6 z-60 w-11/12 max-w-md">
+          <h2 className="text-lg font-semibold mb-2">Attention</h2>
+          <p className="text-gray-700 mb-4">{modalMessage}</p>
+          <button
+            onClick={() => router.back()}
+            className="w-full bg-blue-500 text-white py-2 rounded"
+          >
+            Back
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto p-4">
@@ -211,7 +262,7 @@ export default function CheckoutPage() {
           </div>
         </div>
 
-         {/* Shipping Details */}
+        {/* Shipping Details */}
         <div className="bg-white border rounded shadow border-gray-300">
           <div className="custom-blue text-white px-4 py-2 font-semibold">Shipping Details</div>
           <div className="p-4 grid grid-cols-2 gap-4">
@@ -323,13 +374,37 @@ export default function CheckoutPage() {
 
         {/* Order */}
         <div className="bg-white border rounded shadow p-4 border-gray-300">
-          <div className="text-lg font-semibold mb-2">Your order</div>
+          <div className="text-lg font-semibold mb-4">Your order</div>
 
-          <div className="border border-gray-300 p-3 rounded bg-gray-50 flex items-center">
-            <div>Product:</div>
-            <div className="font-semibold ml-2">Surface Pro 11</div>
-          </div>
+          {cartItems.length === 0 ? (
+            <p className="text-gray-500">No products in cart.</p>
+          ) : (
+            <div className="space-y-3">
+              {cartItems.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center gap-3 border border-gray-200 rounded p-3 bg-gray-50"
+                >
+                  {/* Image */}
+                  <div className="w-14 h-14 relative rounded overflow-hidden bg-white">
+                    <img
+                      src={item.image_url || "/placeholder.png"}
+                      alt={item.product_name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+
+                  {/* Name + qty */}
+                  <div className="flex-1">
+                    <div className="font-medium text-sm">{item.product_name}</div>
+                    <div className="text-xs text-gray-500">Qty: {item.quantity}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
+
 
         <div className="flex justify-center">
           <button className="min-w-xs custom-blue text-white py-4 rounded font-semibold">

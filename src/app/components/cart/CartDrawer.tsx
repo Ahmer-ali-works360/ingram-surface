@@ -4,10 +4,43 @@ import { useCart } from "@/context/CartContext";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { FaTrash, FaTimes } from "react-icons/fa"; // X button icon
+import { useState } from "react";
 
 export default function CartDrawer() {
-  const { cartItems, isCartOpen, closeCart, removeFromCart, clearCart } = useCart();
+  const {
+    cartItems,
+    isCartOpen,
+    closeCart,
+    removeFromCart,
+    clearCart,
+    totalQuantity,
+  } = useCart();
+
   const router = useRouter();
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMessage, setModalMessage] = useState("");
+
+  const handleCheckout = () => {
+    // If cart empty
+    if (cartItems.length === 0) {
+      setModalMessage("Your cart is empty. Please add product(s) first.");
+      setIsModalOpen(true);
+      return;
+    }
+
+    // If quantity limit exceeded
+    if (totalQuantity > 3) {
+      setModalMessage(
+        "Your cart limit exceeded. Please update cart (max 3 total items)."
+      );
+      setIsModalOpen(true);
+      return;
+    }
+
+    closeCart();
+    router.push("/checkout");
+  };
 
   return (
     <>
@@ -98,11 +131,10 @@ export default function CartDrawer() {
             >
               View Cart
             </button>
+
+            {/* Checkout button now has validation */}
             <button
-              onClick={() => {
-                closeCart();
-                router.push("/checkout");
-              }}
+              onClick={handleCheckout}
               className="w-full bg-yellow-400 text-black py-2 rounded hover:bg-yellow-500 transition"
             >
               Checkout
@@ -110,6 +142,24 @@ export default function CartDrawer() {
           </div>
         )}
       </div>
+
+      {/* Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" />
+
+          <div className="bg-white rounded-lg p-6 z-60 w-11/12 max-w-md">
+            <h2 className="text-lg font-semibold mb-2">Attention</h2>
+            <p className="text-gray-700 mb-4">{modalMessage}</p>
+            <button
+              onClick={() => setIsModalOpen(false)}
+              className="w-full bg-blue-500 text-white py-2 rounded"
+            >
+              Back
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }

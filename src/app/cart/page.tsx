@@ -1,15 +1,60 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useCart } from "@/context/CartContext";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function CartPage() {
   const { cartItems, removeFromCart, clearCart, updateQuantity } = useCart();
   const router = useRouter();
 
-  const totalItems = cartItems.reduce((sum, item) => sum + (item.quantity ?? 1), 0); // ✅ fallback
+  const [authLoading, setAuthLoading] = useState(true);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      if (!data.session) {
+        router.replace("/login?redirect=/cart");
+      } else {
+        setAuthLoading(false);
+      }
+    });
+  }, [router]);
+
+  const totalItems = cartItems.reduce((sum, item) => sum + (item.quantity ?? 1), 0);
+
+  // ---------------- Modal State ----------------
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalType, setModalType] = useState<"remove" | "clear" | null>(null);
+  const [targetId, setTargetId] = useState<number | string | null>(null);
+
+  const openRemoveModal = (id: number | string) => {
+    setModalType("remove");
+    setTargetId(id);
+    setIsModalOpen(true);
+  };
+
+  const openClearModal = () => {
+    setModalType("clear");
+    setTargetId(null);
+    setIsModalOpen(true);
+  };
+
+  const handleConfirm = () => {
+    if (modalType === "remove" && targetId !== null) {
+      removeFromCart(targetId);
+    }
+    if (modalType === "clear") {
+      clearCart();
+    }
+
+    setIsModalOpen(false);
+    setModalType(null);
+    setTargetId(null);
+  };
+
+  if (authLoading) return null;
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -49,7 +94,7 @@ export default function CartPage() {
                       <input
                         type="number"
                         min={1}
-                        value={item.quantity ?? 1} // ✅ controlled with fallback
+                        value={item.quantity ?? 1}
                         className="w-16 border rounded px-2 py-1 text-sm"
                         onChange={(e) =>
                           updateQuantity(item.id, Number(e.target.value))
@@ -61,7 +106,7 @@ export default function CartPage() {
 
                 {/* Remove Button */}
                 <button
-                  onClick={() => removeFromCart(item.id)}
+                  onClick={() => openRemoveModal(item.id)}
                   className="text-red-500 hover:text-red-700 text-xl"
                   title="Remove item"
                 >
@@ -72,7 +117,7 @@ export default function CartPage() {
 
             {/* Clear Cart Button */}
             <button
-              onClick={clearCart}
+              onClick={openClearModal}
               className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 mt-4"
             >
               Clear Cart
@@ -95,6 +140,35 @@ export default function CartPage() {
             >
               Proceed to Checkout
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ------------------ CONFIRM MODAL ------------------ */}
+      {isModalOpen && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
+          <div className="bg-white p-6 rounded shadow-lg w-96">
+            <h2 className="font-semibold text-lg mb-4">Are you sure?</h2>
+            <p className="text-gray-600 mb-6">
+              {modalType === "remove"
+                ? "Do you want to remove this item from your cart?"
+                : "Do you want to clear your cart?"}
+            </p>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="px-4 py-2 rounded border"
+              >
+                No
+              </button>
+              <button
+                onClick={handleConfirm}
+                className="px-4 py-2 rounded bg-red-500 text-white"
+              >
+                Yes
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -9,7 +9,7 @@ export type CartItem = {
   image_url?: string;
   sku?: string;
   slug?: string;
-  quantity: number; // ✅ quantity added
+  quantity: number;
 };
 
 /* -------------------- Cart Context Type -------------------- */
@@ -18,10 +18,11 @@ type CartContextType = {
   addToCart: (item: CartItem) => void;
   removeFromCart: (id: number | string) => void;
   clearCart: () => void;
-  updateQuantity: (id: number | string, quantity: number) => void; // ✅ quantity updater
+  updateQuantity: (id: number | string, quantity: number) => void;
   isCartOpen: boolean;
   openCart: () => void;
   closeCart: () => void;
+  totalQuantity: number;
 };
 
 /* -------------------- Create Context -------------------- */
@@ -44,17 +45,28 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem("cart", JSON.stringify(cartItems));
   }, [cartItems]);
 
+  /* -------------------- Helpers -------------------- */
+  const getTotalQuantity = (items: CartItem[]) => {
+    return items.reduce((sum, item) => sum + item.quantity, 0);
+  };
+
   /* -------------------- Actions -------------------- */
   const addToCart = (item: CartItem) => {
     setCartItems((prev) => {
       const existing = prev.find((i) => i.id === item.id);
-      if (existing) {
-        // agar item already hai to quantity +1
-        return prev.map((i) =>
-          i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i
-        );
-      }
-      return [...prev, { ...item, quantity: 1 }]; // default quantity 1
+
+      // calculate new cart state (without setting it yet)
+      const newCart = existing
+        ? prev.map((i) =>
+            i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i
+          )
+        : [...prev, { ...item, quantity: 1 }];
+
+      // validate total quantity <= 3
+      const totalQty = getTotalQuantity(newCart);
+      if (totalQty > 3) return prev; // reject update
+
+      return newCart;
     });
   };
 
@@ -65,15 +77,23 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const clearCart = () => setCartItems([]);
 
   const updateQuantity = (id: number | string, quantity: number) => {
-    setCartItems((prev) =>
-      prev.map((i) =>
+    setCartItems((prev) => {
+      const newCart = prev.map((i) =>
         i.id === id ? { ...i, quantity: quantity < 1 ? 1 : quantity } : i
-      )
-    );
+      );
+
+      // validate total quantity <= 3
+      const totalQty = getTotalQuantity(newCart);
+      if (totalQty > 3) return prev; // reject update
+
+      return newCart;
+    });
   };
 
   const openCart = () => setIsCartOpen(true);
   const closeCart = () => setIsCartOpen(false);
+
+  const totalQuantity = getTotalQuantity(cartItems);
 
   return (
     <CartContext.Provider
@@ -82,10 +102,11 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         addToCart,
         removeFromCart,
         clearCart,
-        updateQuantity, // ✅ added
+        updateQuantity,
         isCartOpen,
         openCart,
         closeCart,
+        totalQuantity,
       }}
     >
       {children}
