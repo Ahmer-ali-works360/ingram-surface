@@ -4,6 +4,9 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import slugify from "slugify";
+import { useAuthRole } from "../context/AuthContext";
+import { useEffect } from "react";
+
 
 type SelectedState = {
   brand: string;
@@ -21,6 +24,20 @@ type SelectedState = {
 
 export default function AddProductPage() {
   const router = useRouter();
+
+  //ristriction for only admin and shop manager 
+   const { loading, isAllowed } = useAuthRole([
+    "admin",
+    "shop manager",
+  ]);
+
+  useEffect(() => {
+    if (!loading && !isAllowed) {
+      router.replace("/login"); // ya /unauthorized
+    }
+  }, [loading, isAllowed, router]);
+
+ 
 
   const [customBrand, setCustomBrand] = useState(false);
   const [customProcessor, setCustomProcessor] = useState(false);
@@ -212,6 +229,10 @@ export default function AddProductPage() {
     }
   };
 
+
+   if (loading) return null;
+
+  if (!isAllowed) return null;
     return (
         <div className="max-w-7xl mx-auto p-6 bg-gray-50 min-h-screen">
             {/* Header Row */}

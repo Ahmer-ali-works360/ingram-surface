@@ -4,9 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { useParams } from "next/navigation";
-import { useAuth } from "@/app/context/AuthContext";
+import { useParams, useRouter } from "next/navigation";
+import { useAuth, useAuthRole } from "@/app/context/AuthContext";
 import { useCart } from "@/context/CartContext";
+import { Pencil, Trash2 } from "lucide-react";
 
 const PLACEHOLDER_SVG =
   "data:image/svg+xml;utf8," +
@@ -14,262 +15,165 @@ const PLACEHOLDER_SVG =
   <svg xmlns='http://www.w3.org/2000/svg' width='600' height='400'>
     <rect width='100%' height='100%' fill='#e5e7eb'/>
     <text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle'
-      font-size='24' fill='#374151' font-family='Arial, Helvetica, sans-serif'>
+      font-size='24' fill='#374151'>
       Product Image
     </text>
   </svg>`);
 
 export default function ProductPage() {
-  const { addToCart } = useCart();
+  const router = useRouter();
   const { slug } = useParams();
-  const { user } = useAuth();
+
+  const { user, loading: authLoading } = useAuth();
+  const { isAllowed } = useAuthRole(["admin", "shop manager"]);
+  const { addToCart } = useCart();
 
   const [product, setProduct] = useState<any>(null);
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
   const [quantity, setQuantity] = useState(1);
   const [zoomOpen, setZoomOpen] = useState(false);
-  const [companyName, setCompanyName] = useState("");
+  const [mainImage, setMainImage] = useState("");
+  const [selectedIndex, setSelectedIndex] = useState(0);
 
-  // Main image state
-  const [mainImage, setMainImage] = useState<string>("");
-
-  // Selected index for gallery
-  const [selectedIndex, setSelectedIndex] = useState<number>(0);
-
+  /* 🔒 LOGIN REQUIRED */
   useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace(`/login?redirect=/product/${slug}`);
+    }
+  }, [authLoading, user, router, slug]);
+
+  /* 📦 FETCH PRODUCT */
+  useEffect(() => {
+    if (!slug) return;
+
     const fetchProduct = async () => {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("products")
         .select("*")
         .eq("slug", slug)
         .single();
 
-      if (error) {
-        console.error(error);
-        return;
-      }
+      if (!data) return;
 
       setProduct(data);
-
-      // Set default main image
       setMainImage(data.thumbnail_url || PLACEHOLDER_SVG);
 
-      const relatedQuery = supabase
+      const { data: related } = await supabase
         .from("products")
         .select("*")
         .neq("slug", slug)
         .limit(4);
 
-      const conditions: string[] = [];
-      if (data.form_factor) conditions.push(`form_factor.eq.${data.form_factor}`);
-      if (data.processor) conditions.push(`processor.eq.${data.processor}`);
-      if (data.memory) conditions.push(`memory.eq.${data.memory}`);
-
-      if (conditions.length > 0) {
-        relatedQuery.or(conditions.join(","));
-      }
-
-      const { data: related } = await relatedQuery;
       setRelatedProducts(related || []);
     };
 
     fetchProduct();
   }, [slug]);
 
+  /* 🔍 ZOOM SCROLL LOCK */
   useEffect(() => {
-    if (zoomOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "auto";
-    }
+    document.body.style.overflow = zoomOpen ? "hidden" : "auto";
   }, [zoomOpen]);
 
+  /* ⛔ SAFE RETURNS */
+  if (authLoading) return null;
+  if (!user) return null;
   if (!product) return <p className="text-center mt-10">Loading...</p>;
 
-  const stockQty = product?.stock_quantity ?? 0;
+  const stockQty = product.stock_quantity ?? 0;
 
-  const increaseQty = () => {
-    if (quantity < stockQty) {
-      setQuantity((q) => q + 1);
-    }
-  };
-
-  const decreaseQty = () => {
-    setQuantity((q) => (q > 1 ? q - 1 : 1));
-  };
-
-  // Gallery array with thumbnail included
   const gallery = [
     product.thumbnail_url || PLACEHOLDER_SVG,
     ...(product.gallery_urls || []),
-  ].filter((url: string) => url && url !== "");
+  ].filter(Boolean);
 
   return (
     <div className="max-w-6xl mx-auto p-6">
-      {/* PRODUCT SECTION */}
       <div className="flex flex-col lg:flex-row gap-10">
-        {/* Left: Image */}
+
+        {/* IMAGE SECTION */}
         <div className="lg:w-1/2 w-full flex flex-col items-center">
           <div
-            className="w-[300px] lg:w-[400px] h-[300px] lg:h-[400px] relative rounded-xl overflow-hidden shadow cursor-zoom-in"
-            onClick={() => setZoomOpen(true)}
+            className="relative w-[300px] lg:w-[400px] h-[300px] lg:h-[400px] rounded-xl overflow-hidden shadow group"
           >
             <Image
-              src={mainImage || PLACEHOLDER_SVG}
+              src={mainImage}
               alt={product.product_name}
               fill
               className="object-cover"
               unoptimized
             />
-          </div>
 
-          {/* ====== GALLERY IMAGES ====== */}
-          {gallery.length > 0 && (
-            <div className="mt-6 w-full flex flex-wrap gap-3 justify-center">
-              {gallery.map((url: string, idx: number) => (
-                <div
-                  key={idx}
-                  className={`relative w-[80px] h-[80px] rounded-lg overflow-hidden border cursor-pointer ${selectedIndex === idx ? "border-blue-500" : ""
-                    }`}
-                  onClick={() => {
-                    setMainImage(url);
-                    setSelectedIndex(idx);
-                  }}
+            {/* 🛠 ADMIN / SHOP MANAGER ICONS */}
+            {isAllowed && (
+              <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition">
+                <button
+                  onClick={() => router.push(`/admin/edit-product/${product.id}`)}
+                  className="p-2 bg-white rounded-full shadow hover:bg-gray-100"
                 >
-                  <Image
-                    src={url}
-                    alt={`Gallery ${idx + 1}`}
-                    fill
-                    className="object-cover"
-                    unoptimized
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+                  <Pencil size={18} />
+                </button>
 
-        {/* Right: Details */}
-        <div className="lg:w-1/2 w-full flex flex-col justify-between space-y-6">
-          <div className="space-y-3">
-            <h1 className="text-3xl font-bold">{product.product_name}</h1>
-            <p className="text-gray-500">SKU: {product.sku}</p>
-
-            {/* Description as Bullet Points */}
-            {product.description ? (
-              <ul className="ml-5 list-disc text-gray-700 space-y-2">
-                {product.description.split("\n").map((line: string, idx: number) => (
-                  <li key={idx}>{line}</li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-gray-700">No description available.</p>
-            )}
-
-            {/* Quantity selector (only if stock > 0) */}
-            {stockQty > 0 && (
-              <div className="flex items-center gap-3 mt-4">
-                <span className="font-semibold">Quantity:</span>
-                <div className="flex items-center border rounded">
-                  <button
-                    onClick={decreaseQty}
-                    className="px-3 py-1 bg-gray-200 hover:bg-gray-300"
-                  >
-                    -
-                  </button>
-                  <span className="px-4">{quantity}</span>
-                  <button
-                    onClick={increaseQty}
-                    className="px-3 py-1 bg-gray-200 hover:bg-gray-300"
-                  >
-                    +
-                  </button>
-                </div>
+                <button
+                  onClick={() => alert("Delete logic here")}
+                  className="p-2 bg-red-600 text-white rounded-full shadow hover:bg-red-700"
+                >
+                  <Trash2 size={18} />
+                </button>
               </div>
             )}
           </div>
 
-          {/* Stock Info */}
-          <p className="text-sm text-gray-600">
-            Available Stock:{" "}
-            <span
-              className={`font-semibold ${stockQty > 0 ? "text-green-600" : "text-red-500"
+          {/* GALLERY */}
+          <div className="mt-6 flex gap-3 flex-wrap justify-center">
+            {gallery.map((url: string, idx: number) => (
+              <div
+                key={idx}
+                className={`relative w-[80px] h-[80px] rounded border cursor-pointer ${
+                  selectedIndex === idx ? "border-blue-500" : ""
                 }`}
-            >
+                onClick={() => {
+                  setMainImage(url);
+                  setSelectedIndex(idx);
+                }}
+              >
+                <Image src={url} alt="" fill className="object-cover" unoptimized />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* DETAILS */}
+        <div className="lg:w-1/2 space-y-6">
+          <h1 className="text-3xl font-bold">{product.product_name}</h1>
+          <p className="text-gray-500">SKU: {product.sku}</p>
+
+          <p className="text-sm">
+            Stock:{" "}
+            <span className={stockQty > 0 ? "text-green-600" : "text-red-500"}>
               {stockQty}
             </span>
           </p>
 
-          {/* IN STOCK */}
-          {stockQty > 0 ? (
-              <button
-    className="w-xs bg-yellow-400 text-black py-3 rounded hover:bg-yellow-500 font-semibold"
-    onClick={() =>
-      addToCart({
-        id: product.id,
-        product_name: product.product_name,
-        image_url: mainImage || product.thumbnail_url,
-        sku: product.sku,
-        slug: product.slug,
-        quantity: quantity,
-      })
-    }
-  >
-    Add to Cart
-  </button>
-          ) : (
-            /* OUT OF STOCK */
-            <div className="border rounded-lg p-4 bg-gray-50 space-y-4">
-              <div>
-                <label className="text-sm font-medium text-gray-600">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  value={user?.email || ""}
-                  disabled
-                  className="mt-1 w-full px-3 py-2 border rounded bg-gray-200 text-gray-600 cursor-not-allowed"
-                />
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-gray-600">
-                  Company Name
-                </label>
-                <input
-                  type="text"
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  placeholder="Enter company name"
-                  className="mt-1 w-full px-3 py-2 border rounded"
-                />
-              </div>
-
-              <button className="w-full bg-blue-600 text-white py-3 rounded hover:bg-blue-700 font-semibold">
-                Add to Wishlist / Waitlist
-              </button>
-            </div>
+          {stockQty > 0 && (
+            <button
+              onClick={() =>
+                addToCart({
+                  id: product.id,
+                  product_name: product.product_name,
+                  image_url: mainImage,
+                  sku: product.sku,
+                  slug: product.slug,
+                  quantity,
+                })
+              }
+              className="bg-yellow-400 px-6 py-3 rounded font-semibold hover:bg-yellow-500"
+            >
+              Add to Cart
+            </button>
           )}
         </div>
       </div>
-
-      {/* ZOOM MODAL */}
-      {zoomOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 cursor-zoom-out"
-          onClick={() => setZoomOpen(false)}
-        >
-          <div className="w-[80%] max-w-4xl h-[80%] relative">
-            <Image
-              src={mainImage || PLACEHOLDER_SVG}
-              alt={product.product_name}
-              fill
-              className="object-contain"
-              unoptimized
-            />
-          </div>
-        </div>
-      )}
 
       {/* RELATED PRODUCTS */}
       {relatedProducts.length > 0 && (
@@ -280,19 +184,19 @@ export default function ProductPage() {
               <Link
                 key={item.id}
                 href={`/product/${item.slug}`}
-                className="group border rounded-lg p-3 hover:shadow transition"
+                className="border rounded p-3 hover:shadow"
               >
-                <div className="relative w-full h-[180px] mb-3 overflow-hidden rounded">
+                <div className="relative h-[160px] mb-2">
                   <Image
                     src={item.thumbnail_url || PLACEHOLDER_SVG}
                     alt={item.product_name}
                     fill
-                    className="object-cover group-hover:scale-105 transition"
+                    className="object-cover"
                   />
                 </div>
-                <h3 className="text-sm font-semibold line-clamp-2">
+                <p className="text-sm font-semibold line-clamp-2">
                   {item.product_name}
-                </h3>
+                </p>
               </Link>
             ))}
           </div>
