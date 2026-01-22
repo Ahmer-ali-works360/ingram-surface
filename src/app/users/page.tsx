@@ -85,17 +85,38 @@ export default function AdminUsersPage() {
   // Approve / Reject
   // ----------------------------
   const updateStatus = async (
-    id: string,
+    user: Profile,
     status: "approved" | "rejected"
   ) => {
-    setUpdatingId(id);
+    setUpdatingId(user.id);
 
     const { error } = await supabase
       .from("profiles")
       .update({ status })
-      .eq("id", id);
+      .eq("id", user.id);
 
     if (!error) {
+      // ----------------------------
+      // ✅ SEND EMAIL (APPROVED / REJECTED)
+      // ----------------------------
+      const emailType =
+        status === "approved" ? "USER_APPROVED" : "USER_REJECTED";
+
+      await fetch("/api/send-email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          to: user.email,
+          type: emailType,
+          data: {
+            name: `${user.first_name} ${user.last_name}`,
+            loginUrl: `${window.location.origin}/login`,
+          },
+        }),
+      });
+
       fetchUsers();
     }
 
@@ -247,7 +268,7 @@ export default function AdminUsersPage() {
                         <button
                           disabled={updatingId === user.id}
                           onClick={() =>
-                            updateStatus(user.id, "approved")
+                            updateStatus(user, "approved")
                           }
                           className="
                             cursor-pointer
@@ -265,7 +286,7 @@ export default function AdminUsersPage() {
 
                         <button
                           disabled={updatingId === user.id}
-                          onClick={() => updateStatus(user.id, "rejected")}
+                          onClick={() => updateStatus(user, "rejected")}
                           className="cursor-pointer
                           flex items-center gap-1.5
                           rounded-md px-3 py-1.5 text-xs font-medium

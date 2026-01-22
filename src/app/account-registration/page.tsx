@@ -18,6 +18,57 @@ export default function AccountRegistrationPage() {
   const [lastName, setLastName] = useState("");
   const [reseller, setReseller] = useState("");
 
+  /* ---------------------------------------------
+     EMAIL CALL (Next.js API Route)
+     UI / Supabase logic untouched
+  --------------------------------------------- */
+async function sendEmail(payload: {
+  to: string;
+  type: string;
+  data: any;
+}) {
+  try {
+    console.log(
+      "📧 [EMAIL] Sending:",
+      payload.type,
+      "→",
+      payload.to
+    );
+
+    const res = await fetch("/api/send-email", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const result = await res.json();
+
+    if (!res.ok) {
+      console.error(
+        "❌ [EMAIL FAILED]",
+        payload.type,
+        result
+      );
+    } else {
+      console.log(
+        "✅ [EMAIL SENT]",
+        payload.type,
+        "→",
+        payload.to
+      );
+    }
+  } catch (err) {
+    console.error(
+      "🔥 [EMAIL ERROR]",
+      payload.type,
+      err
+    );
+  }
+}
+
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
@@ -29,7 +80,7 @@ export default function AccountRegistrationPage() {
     setLoading(true);
 
     /**
-     * 1️⃣ CREATE AUTH USER (REGISTER ONLY)
+     * 1️⃣ CREATE AUTH USER
      */
     const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
@@ -52,47 +103,70 @@ export default function AccountRegistrationPage() {
 
     /**
      * 2️⃣ INSERT PROFILE DATA
-     * ✅ Email added here
      */
     const { error: profileError } = await supabase
       .from("profiles")
       .insert({
         id: user.id,
-        email: email.trim(),            // 👈 ADDED: save email
+        email: email.trim(),
         first_name: firstName.trim(),
         last_name: lastName.trim(),
         reseller: reseller.trim(),
         role: "subscriber",
-        status: "pending",              // optional, admin approval flow
+        status: "pending",
       });
 
-    setLoading(false);
-
     if (profileError) {
+      setLoading(false);
       alert(profileError.message);
       return;
     }
 
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+    /**
+     * 3️⃣ SEND EMAILS
+     */
+
+    // 👉 Admin notification
+    await sendEmail({
+      to: "ahmer.ali.works360@gmail.com",
+      type: "NEW_USER_REGISTRATION",
+      data: {
+        name: `${firstName.trim()} ${lastName.trim()}`,
+        email: email.trim(),
+        reseller: reseller.trim(),
+      },
+    });
+
+
+    // ⏳ WAIT 4.5 seconds (Mailtrap free limit)
+await wait(15000);
+    // 👉 User confirmation (registration received)
+    await sendEmail({
+      to:email.trim(),
+      type: "USER_REGISTERED",
+      data: {
+        name: firstName.trim(),
+      },
+    });
+
     await supabase.auth.signOut();
 
-    // ✅ SHOW MODAL (no browser alert)
+    setLoading(false);
     setShowSuccessModal(true);
   }
 
   return (
     <div className="relative min-h-screen flex flex-col items-center pt-24 pb-32 overflow-hidden">
-      {/* BACKGROUND IMAGE */}
       <div
         className="absolute inset-0 bg-center bg-cover z-0"
-        style={{
-          backgroundImage: "url('/computer-mouse-object-background.jpg')",
-        }}
+        style={{ backgroundImage: "url('/computer-mouse-object-background.jpg')" }}
       />
-
-      {/* LIGHT OVERLAY */}
       <div className="absolute inset-0 bg-white opacity-95 z-0" />
 
-      {/* CARD */}
       <div className="relative z-10 w-[480px] bg-white border-[10px] border-[#F9F9F9] p-12 rounded-[6px] animate-slide-up">
         <h1 className="text-[28px] font-semibold text-gray-900 mb-6 text-center">
           Registration
@@ -189,19 +263,16 @@ export default function AccountRegistrationPage() {
         </form>
       </div>
 
-      {/* ✅ SUCCESS MODAL */}
       {showSuccessModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white w-[420px] rounded-md p-6 shadow-lg text-center animate-fade-in">
             <h2 className="text-[18px] font-semibold text-gray-900 mb-3">
               Registration Successful
             </h2>
-
             <p className="text-sm text-gray-600 mb-6">
               User registration successful. You can login when admin approves
               your registration.
             </p>
-
             <button
               onClick={() => router.push("/")}
               className="bg-[#3ba1da] text-white px-6 py-2 text-sm rounded hover:bg-[#44b0ec]"
