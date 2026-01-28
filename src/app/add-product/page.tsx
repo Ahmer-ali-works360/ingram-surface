@@ -147,6 +147,8 @@ useEffect(() => {
   fetchStorageOptions();
 }, []);
 
+
+
 // ✅ NEW: generation options from DB
 const [generationOptions, setGenerationOptions] = useState<string[]>([]);
 
@@ -472,15 +474,18 @@ setShowSuccess(true);
     return (
         <div className="max-w-7xl mx-auto p-6 bg-gray-50 min-h-screen">
             {/* Header Row */}
-            <div className="flex items-center justify-between mb-6">
-                <h1 className="text-2xl font-semibold">Add New Device</h1>
-                <p
-                    className="text-sm text-blue-600 cursor-pointer"
-                    onClick={() => router.push("/create-demo-kit")}
-                >
-                    ← Back to Inventory
-                </p>
+            <div className="flex items-center justify-between mb-6 flex-wrap">
+            <h1 className="text-2xl font-semibold w-full sm:w-auto text-center sm:text-left">
+                Add New Device
+            </h1>
+            <p
+                className="text-sm text-blue-600 cursor-pointer w-full sm:w-auto text-center sm:text-right mt-2 sm:mt-0"
+                onClick={() => router.push("/create-demo-kit")}
+            >
+                ← Back to Inventory
+            </p>
             </div>
+
 
             {/* Product Images */}
             <div className="bg-white rounded-xl shadow p-6 mb-6">
@@ -624,18 +629,16 @@ setShowSuccess(true);
                     <div>
                     <p className="text-sm font-medium mb-2">OEM Brand</p>
 
-                    <div className="flex gap-4 text-sm">
+                    {/* Responsive Grid: 1 column on mobile, 2 columns on tablet and larger screens */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-2 text-sm">
                         {brandOptions.map((option) => (
-                        <label
-                            key={option}
-                            className="flex items-center gap-2 cursor-pointer relative"
-                        >
+                        <label key={option} className="flex items-center gap-2 cursor-pointer relative">
                             <div
                             onClick={() => {
                                 handleSelect("brand", option);
                                 setCustomBrand(false);
                             }}
-                            className={`w-5 h-5 border border-gray-400 rounded-sm flex items-center justify-center ${
+                            className={`w-6 h-6 sm:w-7 sm:h-7 md:w-7 md:h-7 border border-gray-400 rounded-sm flex items-center justify-center ${
                                 selected.brand === option ? "bg-blue-600" : "bg-white"
                             }`}
                             >
@@ -643,7 +646,6 @@ setShowSuccess(true);
                                 <span className="text-white text-sm">✓</span>
                             )}
                             </div>
-
                             <span className="select-none">{option}</span>
                         </label>
                         ))}
@@ -655,7 +657,7 @@ setShowSuccess(true);
                             handleSelect("brand", "Custom");
                             setCustomBrand(true);
                             }}
-                            className={`w-5 h-5 border border-gray-400 rounded-sm flex items-center justify-center ${
+                            className={`w-6 h-6 sm:w-7 sm:h-7 md:w-7 md:h-7 border border-gray-400 rounded-sm flex items-center justify-center ${
                             selected.brand === "Custom" ? "bg-blue-600" : "bg-white"
                             }`}
                         >
@@ -670,7 +672,7 @@ setShowSuccess(true);
                     {/* Custom input */}
                     {customBrand && (
                         <input
-                        className="mt-2 w-full border rounded px-3 py-2 text-sm"
+                        className="mt-2 w-full sm:max-w-xs border rounded px-3 py-2 text-sm"
                         value={selected.brand === "Custom" ? "" : selected.brand}
                         onChange={(e) =>
                             setSelected((prev) => ({
@@ -683,61 +685,70 @@ setShowSuccess(true);
                     </div>
 
 
+
+
+
                     {/* Processor */}
                     <div>
-                        <p className="text-sm font-medium mb-2">Processor</p>
-                        <div className="grid grid-cols-2 gap-2 text-sm">
+                    <p className="text-sm font-medium mb-2">Processor</p>
+                    
+                    {/* Responsive Grid: 1 column on mobile, 2 columns on tablet and larger screens */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-2 text-sm">
                         {processorOptions.map((option) => (
-                            <label key={option} className="flex items-center gap-2 cursor-pointer relative">
-                            <div
-                                onClick={() => {
-                                handleSelect("processor", option);
-                                setCustomProcessor(false);
-                                }}
-                                className={`w-5 h-5 border border-gray-400 rounded-sm flex items-center justify-center ${
-                                selected.processor === option ? "bg-blue-600" : "bg-white"
-                                }`}
-                            >
-                                {selected.processor === option && (
-                                <span className="text-white text-sm">✓</span>
-                                )}
-                            </div>
-                            <span className="select-none">{option}</span>
-                            </label>
-                        ))}
-
-                        {/* Custom */}
-                        <label className="flex items-center gap-2 cursor-pointer relative">
+                        <label key={option} className="flex items-center gap-2 cursor-pointer relative">
                             <div
                             onClick={() => {
-                                handleSelect("processor", "Custom");
-                                setCustomProcessor(true);
+                                handleSelect("processor", option);
+                                setCustomProcessor(false);
                             }}
-                            className={`w-5 h-5 border border-gray-400 rounded-sm flex items-center justify-center ${
-                                selected.processor === "Custom" ? "bg-blue-600" : "bg-white"
+                            className={`w-6 h-6 sm:w-7 sm:h-7 md:w-7 md:h-7 border border-gray-400 rounded-sm flex items-center justify-center ${
+                                selected.processor === option ? "bg-blue-600" : "bg-white"
                             }`}
                             >
-                            {selected.processor === "Custom" && (
+                            {selected.processor === option && (
                                 <span className="text-white text-sm">✓</span>
                             )}
                             </div>
-                            <span className="select-none">Custom</span>
+                            <span className="select-none">{option}</span>
                         </label>
-                        </div>
+                        ))}
 
-                        {customProcessor && (
-                        <input
-                            className="mt-2 w-full border rounded px-3 py-2 text-sm"
-                            value={selected.processor === "Custom" ? "" : selected.processor}
-                            onChange={(e) =>
-                            setSelected((prev) => ({
-                                ...prev,
-                                processor: e.target.value,
-                            }))
-                            }
-                        />
-                        )}
+                        {/* Custom Option */}
+                        <label className="flex items-center gap-2 cursor-pointer relative">
+                        <div
+                            onClick={() => {
+                            handleSelect("processor", "Custom");
+                            setCustomProcessor(true);
+                            }}
+                            className={`w-6 h-6 sm:w-7 sm:h-7 md:w-7 md:h-7 border border-gray-400 rounded-sm flex items-center justify-center ${
+                            selected.processor === "Custom" ? "bg-blue-600" : "bg-white"
+                            }`}
+                        >
+                            {selected.processor === "Custom" && (
+                            <span className="text-white text-sm">✓</span>
+                            )}
+                        </div>
+                        <span className="select-none">Custom</span>
+                        </label>
                     </div>
+
+                    {/* Custom Input */}
+                    {customProcessor && (
+                        <input
+                        className="mt-2 w-full sm:max-w-xs border rounded px-3 py-2 text-sm"
+                        value={selected.processor === "Custom" ? "" : selected.processor}
+                        onChange={(e) =>
+                            setSelected((prev) => ({
+                            ...prev,
+                            processor: e.target.value,
+                            }))
+                        }
+                        />
+                    )}
+                    </div>
+
+
+
 
 
                     {/* Form Factor */}
@@ -745,18 +756,16 @@ setShowSuccess(true);
                     <div>
                     <p className="text-sm font-medium mb-2">Form Factor</p>
 
-                    <div className="flex gap-4 text-sm">
+                    {/* Responsive Grid: 1 column on mobile, 2 columns on tablet and larger screens */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-2 text-sm">
                         {formFactorOptions.map((option) => (
-                        <label
-                            key={option}
-                            className="flex items-center gap-2 cursor-pointer relative"
-                        >
+                        <label key={option} className="flex items-center gap-2 cursor-pointer relative">
                             <div
                             onClick={() => {
                                 handleSelect("formFactor", option);
                                 setCustomFormFactor(false);
                             }}
-                            className={`w-5 h-5 border border-gray-400 rounded-sm flex items-center justify-center ${
+                            className={`w-6 h-6 sm:w-7 sm:h-7 md:w-7 md:h-7 border border-gray-400 rounded-sm flex items-center justify-center ${
                                 selected.formFactor === option ? "bg-blue-600" : "bg-white"
                             }`}
                             >
@@ -764,7 +773,6 @@ setShowSuccess(true);
                                 <span className="text-white text-sm">✓</span>
                             )}
                             </div>
-
                             <span className="select-none">{option}</span>
                         </label>
                         ))}
@@ -776,7 +784,7 @@ setShowSuccess(true);
                             handleSelect("formFactor", "Custom");
                             setCustomFormFactor(true);
                             }}
-                            className={`w-5 h-5 border border-gray-400 rounded-sm flex items-center justify-center ${
+                            className={`w-6 h-6 sm:w-7 sm:h-7 md:w-7 md:h-7 border border-gray-400 rounded-sm flex items-center justify-center ${
                             selected.formFactor === "Custom" ? "bg-blue-600" : "bg-white"
                             }`}
                         >
@@ -791,7 +799,7 @@ setShowSuccess(true);
                     {/* Custom input */}
                     {customFormFactor && (
                         <input
-                        className="mt-2 w-full border rounded px-3 py-2 text-sm"
+                        className="mt-2 w-full sm:max-w-xs border rounded px-3 py-2 text-sm"
                         value={selected.formFactor === "Custom" ? "" : selected.formFactor}
                         onChange={(e) =>
                             setSelected((prev) => ({
@@ -804,22 +812,24 @@ setShowSuccess(true);
                     </div>
 
 
+
+
+
                     {/* Generation */}
+
                     <div>
                     <p className="text-sm font-medium mb-2">Generation</p>
 
-                    <div className="grid grid-cols-2 gap-2 text-sm">
+                    {/* Responsive Grid: 1 column on mobile, 2 columns on tablet and larger screens */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-2 text-sm">
                         {generationOptions.map((option) => (
-                        <label
-                            key={option}
-                            className="flex items-center gap-2 cursor-pointer relative"
-                        >
+                        <label key={option} className="flex items-center gap-2 cursor-pointer relative">
                             <div
                             onClick={() => {
                                 handleSelect("generation", option);
                                 setCustomGeneration(false);
                             }}
-                            className={`w-5 h-5 border border-gray-400 rounded-sm flex items-center justify-center ${
+                            className={`w-6 h-6 sm:w-7 sm:h-7 md:w-7 md:h-7 border border-gray-400 rounded-sm flex items-center justify-center ${
                                 selected.generation === option ? "bg-blue-600" : "bg-white"
                             }`}
                             >
@@ -827,7 +837,6 @@ setShowSuccess(true);
                                 <span className="text-white text-sm">✓</span>
                             )}
                             </div>
-
                             <span className="select-none">{option}</span>
                         </label>
                         ))}
@@ -839,7 +848,7 @@ setShowSuccess(true);
                             handleSelect("generation", "Custom");
                             setCustomGeneration(true);
                             }}
-                            className={`w-5 h-5 border border-gray-400 rounded-sm flex items-center justify-center ${
+                            className={`w-6 h-6 sm:w-7 sm:h-7 md:w-7 md:h-7 border border-gray-400 rounded-sm flex items-center justify-center ${
                             selected.generation === "Custom" ? "bg-blue-600" : "bg-white"
                             }`}
                         >
@@ -854,7 +863,7 @@ setShowSuccess(true);
                     {/* Custom input */}
                     {customGeneration && (
                         <input
-                        className="mt-2 w-full border rounded px-3 py-2 text-sm"
+                        className="mt-2 w-full sm:max-w-xs border rounded px-3 py-2 text-sm"
                         value={selected.generation === "Custom" ? "" : selected.generation}
                         onChange={(e) =>
                             setSelected((prev) => ({
@@ -867,22 +876,24 @@ setShowSuccess(true);
                     </div>
 
 
+
+
+
+
                     {/* Memory */}
                     <div>
                     <p className="text-sm font-medium mb-2">Memory</p>
 
-                    <div className="flex gap-4 text-sm">
+                    {/* Responsive Grid: 1 column on mobile, 2 columns on tablet and larger screens */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-2 text-sm">
                         {memoryOptions.map((option) => (
-                        <label
-                            key={option}
-                            className="flex items-center gap-2 cursor-pointer relative"
-                        >
+                        <label key={option} className="flex items-center gap-2 cursor-pointer relative">
                             <div
                             onClick={() => {
                                 handleSelect("memory", option);
                                 setCustomMemory(false);
                             }}
-                            className={`w-5 h-5 border border-gray-400 rounded-sm flex items-center justify-center ${
+                            className={`w-6 h-6 sm:w-7 sm:h-7 md:w-7 md:h-7 border border-gray-400 rounded-sm flex items-center justify-center ${
                                 selected.memory === option ? "bg-blue-600" : "bg-white"
                             }`}
                             >
@@ -890,7 +901,6 @@ setShowSuccess(true);
                                 <span className="text-white text-sm">✓</span>
                             )}
                             </div>
-
                             <span className="select-none">{option}</span>
                         </label>
                         ))}
@@ -902,7 +912,7 @@ setShowSuccess(true);
                             handleSelect("memory", "Custom");
                             setCustomMemory(true);
                             }}
-                            className={`w-5 h-5 border border-gray-400 rounded-sm flex items-center justify-center ${
+                            className={`w-6 h-6 sm:w-7 sm:h-7 md:w-7 md:h-7 border border-gray-400 rounded-sm flex items-center justify-center ${
                             selected.memory === "Custom" ? "bg-blue-600" : "bg-white"
                             }`}
                         >
@@ -917,7 +927,7 @@ setShowSuccess(true);
                     {/* Custom input */}
                     {customMemory && (
                         <input
-                        className="mt-2 w-full border rounded px-3 py-2 text-sm"
+                        className="mt-2 w-full sm:max-w-xs border rounded px-3 py-2 text-sm"
                         value={selected.memory === "Custom" ? "" : selected.memory}
                         onChange={(e) =>
                             setSelected((prev) => ({
@@ -930,23 +940,22 @@ setShowSuccess(true);
                     </div>
 
 
+
                     {/* Storage */}
 
                     <div>
                     <p className="text-sm font-medium mb-2">Storage</p>
 
-                    <div className="grid grid-cols-3 gap-2 text-sm">
+                    {/* Responsive Grid: 1 column on mobile, 2 columns on tablet and larger screens */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-2 text-sm">
                         {storageOptions.map((option) => (
-                        <label
-                            key={option}
-                            className="flex items-center gap-2 cursor-pointer relative"
-                        >
+                        <label key={option} className="flex items-center gap-2 cursor-pointer relative">
                             <div
                             onClick={() => {
                                 handleSelect("storage", option);
                                 setCustomStorage(false);
                             }}
-                            className={`w-5 h-5 border border-gray-400 rounded-sm flex items-center justify-center ${
+                            className={`w-6 h-6 sm:w-7 sm:h-7 md:w-7 md:h-7 border border-gray-400 rounded-sm flex items-center justify-center ${
                                 selected.storage === option ? "bg-blue-600" : "bg-white"
                             }`}
                             >
@@ -954,7 +963,6 @@ setShowSuccess(true);
                                 <span className="text-white text-sm">✓</span>
                             )}
                             </div>
-
                             <span className="select-none">{option}</span>
                         </label>
                         ))}
@@ -966,7 +974,7 @@ setShowSuccess(true);
                             handleSelect("storage", "Custom");
                             setCustomStorage(true);
                             }}
-                            className={`w-5 h-5 border border-gray-400 rounded-sm flex items-center justify-center ${
+                            className={`w-6 h-6 sm:w-7 sm:h-7 md:w-7 md:h-7 border border-gray-400 rounded-sm flex items-center justify-center ${
                             selected.storage === "Custom" ? "bg-blue-600" : "bg-white"
                             }`}
                         >
@@ -981,7 +989,7 @@ setShowSuccess(true);
                     {/* Custom input */}
                     {customStorage && (
                         <input
-                        className="mt-2 w-full border rounded px-3 py-2 text-sm"
+                        className="mt-2 w-full sm:max-w-xs border rounded px-3 py-2 text-sm"
                         value={selected.storage === "Custom" ? "" : selected.storage}
                         onChange={(e) =>
                             setSelected((prev) => ({
@@ -994,23 +1002,22 @@ setShowSuccess(true);
                     </div>
 
 
+
                     {/* Operating System */}
 
                     <div>
                     <p className="text-sm font-medium mb-2">Operating System</p>
 
-                    <div className="grid grid-cols-3 gap-2 text-sm">
+                    {/* Responsive Grid: 1 column on mobile, 2 columns on tablet and larger screens */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-2 text-sm">
                         {osOptions.map((option) => (
-                        <label
-                            key={option}
-                            className="flex items-center gap-2 cursor-pointer relative"
-                        >
+                        <label key={option} className="flex items-center gap-2 cursor-pointer relative">
                             <div
                             onClick={() => {
                                 handleSelect("OS", option);
                                 setcustomOS(false);
                             }}
-                            className={`w-5 h-5 border border-gray-400 rounded-sm flex items-center justify-center ${
+                            className={`w-6 h-6 sm:w-7 sm:h-7 md:w-7 md:h-7 border border-gray-400 rounded-sm flex items-center justify-center ${
                                 selected.OS === option ? "bg-blue-600" : "bg-white"
                             }`}
                             >
@@ -1018,7 +1025,6 @@ setShowSuccess(true);
                                 <span className="text-white text-sm">✓</span>
                             )}
                             </div>
-
                             <span className="select-none">{option}</span>
                         </label>
                         ))}
@@ -1030,7 +1036,7 @@ setShowSuccess(true);
                             handleSelect("OS", "Custom");
                             setcustomOS(true);
                             }}
-                            className={`w-5 h-5 border border-gray-400 rounded-sm flex items-center justify-center ${
+                            className={`w-6 h-6 sm:w-7 sm:h-7 md:w-7 md:h-7 border border-gray-400 rounded-sm flex items-center justify-center ${
                             selected.OS === "Custom" ? "bg-blue-600" : "bg-white"
                             }`}
                         >
@@ -1045,7 +1051,7 @@ setShowSuccess(true);
                     {/* Custom input */}
                     {customOS && (
                         <input
-                        className="mt-2 w-full border rounded px-3 py-2 text-sm"
+                        className="mt-2 w-full sm:max-w-xs border rounded px-3 py-2 text-sm"
                         value={selected.OS === "Custom" ? "" : selected.OS}
                         onChange={(e) =>
                             setSelected((prev) => ({
@@ -1056,6 +1062,7 @@ setShowSuccess(true);
                         />
                     )}
                     </div>
+
 
 
                     {/* Technologies */}
@@ -1106,18 +1113,16 @@ setShowSuccess(true);
                     <div>
                     <p className="text-sm font-medium mb-2">Screen Size</p>
 
-                    <div className="grid grid-cols-3 gap-2 text-sm">
+                    {/* Responsive Grid: 1 column on mobile, 2 columns on tablet and larger screens */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-2 text-sm">
                         {screenOptions.map((option) => (
-                        <label
-                            key={option}
-                            className="flex items-center gap-2 cursor-pointer relative"
-                        >
+                        <label key={option} className="flex items-center gap-2 cursor-pointer relative">
                             <div
                             onClick={() => {
                                 handleSelect("screen", option);
                                 setCustomScreen(false);
                             }}
-                            className={`w-5 h-5 border border-gray-400 rounded-sm flex items-center justify-center ${
+                            className={`w-6 h-6 sm:w-7 sm:h-7 md:w-7 md:h-7 border border-gray-400 rounded-sm flex items-center justify-center ${
                                 selected.screen === option ? "bg-blue-600" : "bg-white"
                             }`}
                             >
@@ -1125,7 +1130,6 @@ setShowSuccess(true);
                                 <span className="text-white text-sm">✓</span>
                             )}
                             </div>
-
                             <span className="select-none">{option}</span>
                         </label>
                         ))}
@@ -1137,7 +1141,7 @@ setShowSuccess(true);
                             handleSelect("screen", "Custom");
                             setCustomScreen(true);
                             }}
-                            className={`w-5 h-5 border border-gray-400 rounded-sm flex items-center justify-center ${
+                            className={`w-6 h-6 sm:w-7 sm:h-7 md:w-7 md:h-7 border border-gray-400 rounded-sm flex items-center justify-center ${
                             selected.screen === "Custom" ? "bg-blue-600" : "bg-white"
                             }`}
                         >
@@ -1152,7 +1156,7 @@ setShowSuccess(true);
                     {/* Custom input */}
                     {customScreen && (
                         <input
-                        className="mt-2 w-full border rounded px-3 py-2 text-sm"
+                        className="mt-2 w-full sm:max-w-xs border rounded px-3 py-2 text-sm"
                         value={selected.screen === "Custom" ? "" : selected.screen}
                         onChange={(e) =>
                             setSelected((prev) => ({
@@ -1165,62 +1169,69 @@ setShowSuccess(true);
                     </div>
 
 
+
                     {/* 5G Enabled */}
                     <div>
-                        <p className="text-sm font-medium mb-2">5G Enabled</p>
-                        <div className="flex gap-4 text-sm">
-                            {["Yes", "No"].map((option) => (
-                                <label key={option} className="flex items-center gap-2 cursor-pointer relative">
-                                    <div
-                                        onClick={() => handleSelect("fiveg", option)}
-                                        className={`w-5 h-5 border border-gray-400 rounded-sm flex items-center justify-center ${selected.fiveg === option ? "bg-blue-600" : "bg-white"
-                                            }`}
-                                    >
-                                        {selected.fiveg === option && <span className="text-white text-sm">✓</span>}
-                                    </div>
-                                    <span className="select-none">{option}</span>
-                                </label>
-                            ))}
-                        </div>
+                    <p className="text-sm font-medium mb-2">5G Enabled</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 gap-2 text-sm">
+                        {["Yes", "No"].map((option) => (
+                        <label key={option} className="flex items-center gap-2 cursor-pointer relative">
+                            <div
+                            onClick={() => handleSelect("fiveg", option)}
+                            className={`w-6 h-6 sm:w-7 sm:h-7 md:w-7 md:h-7 border border-gray-400 rounded-sm flex items-center justify-center ${
+                                selected.fiveg === option ? "bg-blue-600" : "bg-white"
+                            }`}
+                            >
+                            {selected.fiveg === option && <span className="text-white text-sm">✓</span>}
+                            </div>
+                            <span className="select-none">{option}</span>
+                        </label>
+                        ))}
                     </div>
+                    </div>
+
 
                     {/* Copilot */}
                     <div>
-                        <p className="text-sm font-medium mb-2">Copilot</p>
-                        <div className="flex gap-4 text-sm">
-                            {["Yes", "No"].map((option) => (
-                                <label key={option} className="flex items-center gap-2 cursor-pointer relative">
-                                    <div
-                                        onClick={() => handleSelect("copilot", option)}
-                                        className={`w-5 h-5 border border-gray-400 rounded-sm flex items-center justify-center ${selected.copilot === option ? "bg-blue-600" : "bg-white"
-                                            }`}
-                                    >
-                                        {selected.copilot === option && <span className="text-white text-sm">✓</span>}
-                                    </div>
-                                    <span className="select-none">{option}</span>
-                                </label>
-                            ))}
-                        </div>
+                    <p className="text-sm font-medium mb-2">Copilot</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 gap-2 text-sm">
+                        {["Yes", "No"].map((option) => (
+                        <label key={option} className="flex items-center gap-2 cursor-pointer relative">
+                            <div
+                            onClick={() => handleSelect("copilot", option)}
+                            className={`w-6 h-6 sm:w-7 sm:h-7 md:w-7 md:h-7 border border-gray-400 rounded-sm flex items-center justify-center ${
+                                selected.copilot === option ? "bg-blue-600" : "bg-white"
+                            }`}
+                            >
+                            {selected.copilot === option && <span className="text-white text-sm">✓</span>}
+                            </div>
+                            <span className="select-none">{option}</span>
+                        </label>
+                        ))}
                     </div>
+                    </div>
+
 
                     {/* Product Status */}
                     <div>
-                        <p className="text-sm font-medium mb-2">Product Status</p>
-                        <div className="flex gap-4 text-sm">
-                            {["Publish", "Private"].map((option) => (
-                                <label key={option} className="flex items-center gap-2 cursor-pointer relative">
-                                    <div
-                                        onClick={() => handleSelect("status", option)}
-                                        className={`w-5 h-5 border border-gray-400 rounded-sm flex items-center justify-center ${selected.status === option ? "bg-blue-600" : "bg-white"
-                                            }`}
-                                    >
-                                        {selected.status === option && <span className="text-white text-sm">✓</span>}
-                                    </div>
-                                    <span className="select-none">{option}</span>
-                                </label>
-                            ))}
-                        </div>
+                    <p className="text-sm font-medium mb-2">Product Status</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 gap-2 text-sm">
+                        {["Publish", "Private"].map((option) => (
+                        <label key={option} className="flex items-center gap-2 cursor-pointer relative">
+                            <div
+                            onClick={() => handleSelect("status", option)}
+                            className={`w-6 h-6 sm:w-7 sm:h-7 md:w-7 md:h-7 border border-gray-400 rounded-sm flex items-center justify-center ${
+                                selected.status === option ? "bg-blue-600" : "bg-white"
+                            }`}
+                            >
+                            {selected.status === option && <span className="text-white text-sm">✓</span>}
+                            </div>
+                            <span className="select-none">{option}</span>
+                        </label>
+                        ))}
                     </div>
+                    </div>
+
 
                     {/* Publish Date */}
                     <div>
